@@ -1,226 +1,172 @@
 # Website Desa Borong
 
-Website Desa Borong adalah sistem informasi desa digital yang terdiri dari frontend Next.js, backend Go API, dan database MySQL. Sistem ini dirancang untuk mendukung kebutuhan layanan publik desa seperti profil desa, informasi statistik, agenda, berita, pengaduan, layanan surat, transparansi pajak, dan dashboard admin operasional.
+Sistem informasi desa digital yang terdiri dari frontend Next.js, backend Go API, dan database MySQL. Sistem ini mendukung layanan publik desa seperti profil desa, statistik, agenda, berita, pengaduan, layanan surat, transparansi pajak, serta dashboard admin operasional.
 
-Dokumen ini menjelaskan keseluruhan sistem secara terstruktur mulai dari tujuan, arsitektur, alur kerja, komponen, persiapan lingkungan, cara menjalankan secara lokal, hingga panduan operasional dasar.
+| Bagian | Teknologi Utama | Fungsi |
+|---|---|---|
+| Frontend | Next.js 16 (App Router) | Portal publik dan dashboard admin |
+| Backend | Go 1.26 (REST API, arsitektur clean/hexagonal) | Logika bisnis, autentikasi, integrasi data |
+| Database | MySQL 8.4 | Penyimpanan data transaksi, konten, dan operasional desa |
 
-## 1. Ringkasan Proyek
+Sistem melayani dua sisi pengguna:
 
-Proyek ini dibagi menjadi tiga bagian utama:
+- **Pengunjung umum** — melihat profil desa, statistik, APBDes, agenda, fasilitas, berita, galeri, UMKM, pajak, dan layanan digital.
+- **Admin/operator desa** — mengelola konten, pengajuan surat, pengaduan, data penduduk, data pajak, dan modul operasional lainnya.
 
-- Frontend: aplikasi web public dan dashboard admin berbasis Next.js App Router
-- Backend: REST API berbasis Go dengan arsitektur clean/hexagonal
-- Database: MySQL 8.4 untuk penyimpanan data transaksi, konten, otorisasi, dan data operasional desa
+## Daftar Isi
 
-Secara umum, sistem ini mendukung dua sisi pengguna:
+1. [Tujuan Sistem](#tujuan-sistem)
+2. [Arsitektur](#arsitektur)
+3. [Struktur Repository](#struktur-repository)
+4. [Teknologi yang Digunakan](#teknologi-yang-digunakan)
+5. [Persyaratan Sistem](#persyaratan-sistem)
+6. [Konfigurasi Environment](#konfigurasi-environment)
+7. [Menjalankan Aplikasi Secara Lokal](#menjalankan-aplikasi-secara-lokal)
+8. [Pengelolaan Database](#pengelolaan-database)
+9. [API dan Integrasi](#api-dan-integrasi)
+10. [Keamanan dan Best Practice](#keamanan-dan-best-practice)
+11. [Troubleshooting](#troubleshooting)
+12. [Dokumentasi Pendukung](#dokumentasi-pendukung)
+13. [Kontribusi](#kontribusi)
+14. [Lisensi](#lisensi)
 
-- Pengunjung umum: melihat profil desa, statistik, APBDes, agenda, fasilitas, berita, galeri, UMKM, pajak, dan layanan digital
-- Admin / operator desa: mengelola konten, pengajuan surat, pengaduan, data penduduk, data pajak, dan modul operasional lainnya
+## Tujuan Sistem
 
-## 2. Tujuan Sistem
+- Menyediakan portal informasi digital desa yang mudah diakses publik.
+- Menyederhanakan pengelolaan data desa secara terstruktur.
+- Memungkinkan pengajuan dan pelacakan layanan warga secara digital.
+- Meningkatkan transparansi keuangan dan pajak desa.
+- Memudahkan admin desa dalam mengelola konten, data, dan proses administrasi.
 
-Sistem ini dikembangkan untuk:
+## Arsitektur
 
-- Menyediakan portal informasi digital desa yang mudah diakses publik
-- Menyederhanakan pengelolaan data desa secara terstruktur
-- Memungkinkan pengajuan dan pelacakan layanan warga secara digital
-- Meningkatkan transparansi keuangan dan pajak desa
-- Memudahkan admin desa dalam mengelola konten, data, dan proses administrasi
+Proyek mengikuti tiga layer utama:
 
-## 3. Arsitektur Sistem
+| Layer | Isi |
+|---|---|
+| Frontend | Next.js, React, Tailwind CSS, Zustand, komponen UI reusable |
+| Application | Backend Go API, usecase/domain logic, routing HTTP |
+| Data | MySQL, migrasi schema, repository, file storage |
 
-Proyek ini mengikuti arsitektur tiga layer utama:
+Alur kerja singkat:
 
-- Frontend layer: Next.js, React, Tailwind CSS, Zustand, komponen UI reusable
-- Application layer: backend Go API, usecase/domain logic, routing HTTP
-- Data layer: MySQL, migrasi schema, repository, file storage
+```
+Browser -> Frontend (Next.js) -> API Backend (Go) -> MySQL / File Storage
+```
 
-Alur kerja umum:
+## Struktur Repository
 
-- Browser mengakses frontend di localhost:3300
-- Frontend memanggil backend API melalui route proxied atau URL internal
-- Backend membaca dan menulis data ke MySQL
-- File upload disimpan di volume yang dikelola Docker
-- Admin dan publik mengakses halaman yang sesuai dengan otorisasi dan kebijakan aplikasi
+```
+.
+├── docker-compose.yml
+├── README.md
+├── .env.example
+├── .env
+├── Backend/
+│   ├── cmd/
+│   ├── internal/
+│   ├── migrations/
+│   ├── pkg/
+│   ├── Dockerfile
+│   ├── go.mod
+│   ├── README.md
+│   ├── SPEC.md
+│   └── PRD.md
+└── Frontend/
+    ├── app/
+    ├── components/
+    ├── lib/
+    ├── public/
+    ├── store/
+    ├── types/
+    ├── package.json
+    ├── Dockerfile
+    ├── README.md
+    ├── SPEC.md
+    └── PRD.md
+```
 
-Diagram singkat:
+**Folder Frontend:**
 
-Browser
--> Frontend (Next.js)
--> API Backend (Go)
--> MySQL
--> File Storage
+| Folder | Isi |
+|---|---|
+| `app/` | Route aplikasi dan halaman utama |
+| `components/` | Komponen reusable UI dan layout |
+| `lib/services/` | Layer akses data dan integrasi API |
+| `lib/mock/` | Data contoh untuk prototyping |
+| `lib/validations/` | Schema validasi form |
+| `store/` | Zustand store untuk state aplikasi |
+| `types/` | Definisi tipe data TypeScript |
 
-## 4. Struktur Repository
+**Folder Backend:**
 
-Berikut struktur utama repository:
+| Folder | Isi |
+|---|---|
+| `cmd/api` | Entrypoint aplikasi |
+| `internal/domain` | Entity domain dan aturan bisnis dasar |
+| `internal/usecase` | Logika bisnis per modul |
+| `internal/delivery/http` | Routing HTTP, handler, middleware |
+| `internal/infrastructure` | Database, auth, storage |
+| `migrations/` | File migrasi MySQL |
+| `pkg/` | Utilitas umum dan helper |
 
-- Root folder
-  - docker-compose.yml
-  - README.md
-  - .env.example
-  - .env
-- Backend/
-  - cmd/
-  - internal/
-  - migrations/
-  - pkg/
-  - Dockerfile
-  - go.mod
-  - README.md
-  - SPEC.md
-  - PRD.md
-- Frontend/
-  - app/
-  - components/
-  - lib/
-  - public/
-  - store/
-  - types/
-  - package.json
-  - Dockerfile
-  - README.md
-  - SPEC.md
-  - PRD.md
+## Teknologi yang Digunakan
 
-## 5. Komponen Utama
+| Frontend | Backend |
+|---|---|
+| Next.js 16 | Go 1.26 |
+| React 19 | MySQL 8.4 |
+| TypeScript | net/http standard library |
+| Tailwind CSS | JWT |
+| Zustand | bcrypt |
+| Zod | golang-migrate |
+| Lucide React | Docker / Docker Compose |
+| Recharts | |
+| Leaflet | |
 
-### 5.1 Frontend
+## Persyaratan Sistem
 
-Frontend dibuat dengan Next.js 16 App Router dan fokus pada pengalaman pengguna publik serta sisi admin.
+| Kebutuhan | Keterangan |
+|---|---|
+| Docker & Docker Compose | Untuk menjalankan seluruh sistem |
+| Node.js 22 | Untuk pengembangan frontend lokal |
+| Go 1.26 | Untuk pengembangan backend lokal |
+| Port 3300 | Frontend |
+| Port 8088 | Backend (host) |
+| Port 3306 | MySQL (host) |
 
-Fitur utama yang biasanya tersedia di frontend:
+## Konfigurasi Environment
 
-- Beranda desa
-- Profil desa
-- Statistik dan APBDes
-- Agenda kegiatan
-- Berita dan galeri
-- UMKM
-- Layanan publik dan pengajuan surat
-- Pengaduan masyarakat
-- Transparansi pajak desa
-- Dashboard admin/operator
+Project root menggunakan file `.env` (template tersedia di `.env.example`). Pastikan file ini **tidak** dipublikasikan ke repository karena berisi data sensitif.
 
-Folder utama:
+| Variabel | Keterangan |
+|---|---|
+| `DB_NAME` | Nama database |
+| `DB_USER` | Username database |
+| `DB_PASSWORD` | Password database |
+| `DB_ROOT_PASSWORD` | Password root MySQL |
+| `JWT_ACCESS_SECRET` | Secret untuk token JWT |
+| `BOOTSTRAP_SUPER_ADMIN_PASSWORD` | Password admin awal |
+| `NEXT_PUBLIC_APP_NAME` | Nama aplikasi (frontend) |
+| `NEXT_PUBLIC_SITE_URL` | URL situs publik |
+| `NEXT_PUBLIC_API_BASE_URL` | Base URL API dari sisi client |
+| `API_INTERNAL_URL` | URL API untuk komunikasi internal |
 
-- app/: route aplikasi dan halaman utama
-- components/: komponen reusable UI dan layout
-- lib/services/: layer akses data dan integrasi API
-- lib/mock/: data contoh untuk proses prototyping
-- lib/validations/: schema validasi form
-- store/: Zustand store untuk state aplikasi
-- types/: definisi tipe data TypeScript
+## Menjalankan Aplikasi Secara Lokal
 
-### 5.2 Backend
-
-Backend dibuat dengan Go dan dirancang untuk menangani operasi data, autentikasi, validasi, logika bisnis, serta integrasi database.
-
-Fitur utama backend:
-
-- REST API untuk autentikasi dan otorisasi
-- CRUD konten seperti berita, agenda, UMKM, fasilitas, galeri
-- Pengelolaan persuratan dan pengajuan layanan
-- Integrasi data pajak dan transparansi keuangan
-- Keamanan JWT dan refresh token
-- Pencatatan audit dan log kegiatan
-- Upload dan penyimpanan file
-
-Folder utama:
-
-- cmd/api: entrypoint aplikasi
-- internal/domain: entity domain dan aturan bisnis dasar
-- internal/usecase: logika bisnis per modul
-- internal/delivery/http: routing HTTP, handler, middleware
-- internal/infrastructure: database, auth, storage,
-- migrations: file migrasi MySQL
-- pkg/: utilitas umum dan helper
-
-### 5.3 Database
-
-Database yang dipakai adalah MySQL 8.4.
-
-Fungsinya meliputi:
-
-- menyimpan data master desa
-- data pengguna dan autentikasi
-- data berita, agenda, fasilitas, galeri, UMKM
-- data layanan surat dan status pengajuan
-- data pajak dan setoran
-- data audit dan log kegiatan
-
-## 6. Teknologi yang Digunakan
-
-### Frontend
-
-- Next.js 16
-- React 19
-- TypeScript
-- Tailwind CSS
-- Zustand
-- Zod
-- Lucide React
-- Recharts
-- Leaflet
-
-### Backend
-
-- Go 1.26
-- MySQL 8.4
-- net/http standard library
-- JWT
-- bcrypt
-- golang-migrate
-- Docker / Docker Compose
-
-## 7. Persyaratan Sistem
-
-Sebelum menjalankan aplikasi, pastikan perangkat Anda sudah memiliki:
-
-- Docker dan Docker Compose
-- Node.js 22 untuk pengembangan frontend lokal
-- Go 1.26 untuk pengembangan backend lokal
-- Akses ke port lokal yang dibutuhkan:
-  - 3300 untuk frontend
-  - 8088 untuk backend host
-  - 3306 untuk MySQL host
-
-## 8. Konfigurasi Environment
-
-Project root menggunakan file .env. Template dapat dilihat di .env.example.
-
-Variabel umum yang perlu diisi:
-
-- DB_NAME
-- DB_USER
-- DB_PASSWORD
-- DB_ROOT_PASSWORD
-- JWT_ACCESS_SECRET
-- BOOTSTRAP_SUPER_ADMIN_PASSWORD
-- NEXT_PUBLIC_APP_NAME
-- NEXT_PUBLIC_SITE_URL
-- NEXT_PUBLIC_API_BASE_URL
-- API_INTERNAL_URL
-
-Pastikan file .env tidak dipublikasikan ke repository karena berisi data sensitif.
-
-## 9. Cara Menjalankan Aplikasi Secara Lokal
-
-### 9.1 Menjalankan seluruh sistem dengan Docker Compose
-
-Dari root project:
+### Dengan Docker Compose (seluruh sistem)
 
 ```bash
 docker compose up --build -d
 ```
 
-Setelah proses selesai, akses:
+| Layanan | URL |
+|---|---|
+| Frontend | http://localhost:3300 |
+| Backend | http://localhost:8088 |
+| MySQL | localhost:3306 |
 
-- Frontend: http://localhost:3300
-- Backend: http://localhost:8088
-- MySQL: localhost:3306
-
-Untuk melihat log:
+Melihat log:
 
 ```bash
 docker compose logs -f backend
@@ -228,166 +174,96 @@ docker compose logs -f frontend
 docker compose logs -f mysql
 ```
 
-Untuk menghentikan layanan:
+Menghentikan layanan:
 
 ```bash
 docker compose down
 ```
 
-Untuk menghentikan sekaligus menghapus data database:
+Menghentikan sekaligus menghapus data database:
 
 ```bash
 docker compose down -v
 ```
 
-### 9.2 Menjalankan backend secara lokal
-
-Dari folder Backend:
+### Backend secara lokal
 
 ```bash
+cd Backend
 go mod tidy
 go run ./cmd/api
 ```
 
 Pastikan MySQL sedang aktif dan environment sudah sesuai.
 
-### 9.3 Menjalankan frontend secara lokal
-
-Dari folder Frontend:
+### Frontend secara lokal
 
 ```bash
+cd Frontend
 npm install
 npm run dev
 ```
 
-Frontend akan berjalan di:
+Frontend akan berjalan di http://localhost:3000.
 
-- http://localhost:3000
+## Pengelolaan Database
 
-## 10. Struktur Alur Produksi
-
-### Sistem public
-
-Pengguna umum dapat mengakses:
-
-- halaman profil desa
-- agenda kegiatan
-- data statistik dan APBDes
-- berita, galeri, UMKM
-- transparansi pajak
-- pencarian layanan dan status pengajuan
-
-### Sistem admin
-
-Admin/desa operator dapat mengelola:
-
-- data konten
-- berita dan galeri
-- pengaduan
-- layanan surat
-- transaksi pajak
-- setoran pajak
-- user dan otorisasi
-- konfigurasi umum
-
-## 11. Pengelolaan Database
-
-Database migrasi berada di folder Backend/migrations.
-
-Beberapa operasi yang umum digunakan:
-
-- melihat status migrasi
-- menjalankan migrasi manual
-- mengulang setup database dari awal
-
-Contoh:
+Migrasi database berada di `Backend/migrations`.
 
 ```bash
+# menjalankan MySQL dan migrasi
 docker compose up -d mysql
 docker compose run --rm migrate
-```
 
-Atau bila ingin restart database dari nol:
-
-```bash
+# restart database dari nol
 docker compose down -v
 docker compose up --build -d
 ```
 
-## 12. API dan Integrasi
+## API dan Integrasi
 
-Backend menyediakan API REST yang digunakan oleh frontend. Frontend biasanya mengakses API melalui service layer di lib/services.
+Backend menyediakan REST API yang diakses frontend melalui service layer di `lib/services`.
 
-Prinsip integrasi yang dipakai:
+- Frontend tidak mengakses data langsung dari komponen.
+- Semua request diarahkan melalui service abstraction.
+- Error API diproses konsisten melalui helper response/error handling.
 
-- frontend tidak mengakses data langsung dari komponen
-- semua request diarahkan melalui service abstraction
-- error API diproses konsisten melalui helper response/error handling
+## Keamanan dan Best Practice
 
-## 13. Keamanan dan Best Practice
+- Rahasia disimpan di `.env`, bukan di source code.
+- Password di-hash sebelum disimpan.
+- JWT digunakan untuk autentikasi; refresh token disimpan dan dirotasi.
+- File upload disimpan di storage terpisah dari source code.
+- CORS dibatasi sesuai domain yang diizinkan.
+- Audit trail diterapkan pada modul transaksi seperti pajak dan layanan.
 
-Beberapa praktik penting di proyek ini:
+## Troubleshooting
 
-- rahasia disimpan di .env, bukan di source code
-- password di-hash sebelum disimpan
-- JWT digunakan untuk autentikasi
-- refresh token disimpan dan dilakukan rotasi
-- file upload disimpan di storage yang terpisah dari source code
-- CORS dibatasi sesuai domain yang diizinkan
-- audit trail penting untuk modul transaksi seperti pajak dan layanan
+| Masalah | Yang Perlu Diperiksa |
+|---|---|
+| Port 3300/8088 sudah dipakai | Ubah konfigurasi di `docker-compose.yml` atau hentikan service lain yang memakai port tersebut |
+| MySQL tidak bisa mulai | File `.env`, `DB_ROOT_PASSWORD`, volume `mysql_data`, status Docker |
+| Backend gagal konek ke database | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, status migrasi |
+| Frontend tidak bisa memanggil API | `NEXT_PUBLIC_API_BASE_URL`, `API_INTERNAL_URL`, `CORS_ALLOWED_ORIGINS` di backend, status service backend |
 
-## 14. Troubleshooting Umum
+## Dokumentasi Pendukung
 
-### Port sudah dipakai
+- **Backend README** — detail implementasi API dan arsitektur backend.
+- **Frontend README** — detail implementasi interface dan fitur aplikasi web.
+- **PRD & SPEC** di masing-masing folder — kebutuhan produk dan spesifikasi teknis.
 
-Jika port 3300 atau 8088 sudah terpakai, ubah konfigurasinya pada docker-compose.yml atau berhentikan service lain yang memakai port tersebut.
+## Kontribusi
 
-### MySQL tidak bisa mulai
+Proyek ini dapat dikembangkan oleh developer frontend, developer backend, admin/operator desa, dan stakeholder atau product owner. Pastikan setiap perubahan disesuaikan dengan dokumen produk dan spesifikasi yang ada di masing-masing folder project.
 
-Periksa:
+## Lisensi
 
-- file .env
-- password DB_ROOT_PASSWORD
-- volume mysql_data
-- status docker
+Hak Cipta (c) 2026 Indal Awalaikal
 
-### Backend gagal konek ke database
+Lisensi ini diberikan berdasarkan ketentuan Lisensi MIT (MIT License).
 
-Periksa:
+Dengan ini diberikan izin, secara cuma-cuma, kepada setiap pihak yang memperoleh salinan perangkat lunak ini beserta berkas dokumentasi terkait ("Perangkat Lunak"), untuk menggunakan Perangkat Lunak tanpa batasan, termasuk namun tidak terbatas pada hak untuk menggunakan, menyalin, memodifikasi, menggabungkan, menerbitkan, mendistribusikan, memberi sublisensi, dan/atau menjual salinan Perangkat Lunak, serta mengizinkan pihak lain yang menerima Perangkat Lunak untuk melakukan hal yang sama, dengan tunduk pada ketentuan berikut:
 
-- DB_HOST
-- DB_PORT
-- DB_NAME
-- DB_USER
-- DB_PASSWORD
-- apakah migrasi sudah selesai
+Pemberitahuan hak cipta di atas dan pemberitahuan izin ini harus disertakan dalam seluruh salinan atau bagian penting dari Perangkat Lunak.
 
-### Frontend tidak bisa memanggil API
-
-Periksa:
-
-- NEXT_PUBLIC_API_BASE_URL
-- API_INTERNAL_URL
-- CORS_ALLOWED_ORIGINS di backend
-- status service backend
-
-## 15. Tim dan Kontribusi
-
-Proyek ini dapat dikembangkan oleh beberapa pihak seperti:
-
-- developer frontend
-- developer backend
-- admin / operator desa
-- stakeholder atau product owner
-
-Untuk kontribusi, pastikan perubahan disesuaikan dengan dokumen produk dan spesifikasi yang ada di masing-masing folder project.
-
-## 16. Dokumentasi Pendukung
-
-- Backend README: menjelaskan detail implementasi API dan arsitektur backend
-- Frontend README: menjelaskan detail implementasi interface dan fitur aplikasi web
-- PRD dan SPEC di masing-masing folder: menjelaskan kebutuhan produk dan spesifikasi teknis
-
-## 17. Ringkasan Keseluruhan
-
-Website Desa Borong adalah platform digital desa yang menggabungkan portal publik, dashboard admin, data operasional, layanan warga, transparansi keuangan, serta sistem informasi desa yang mudah dikelola. Dengan struktur monorepo yang terpisah namun terhubung, project ini memisahkan tanggung jawab antara frontend, backend, dan database, sehingga lebih mudah dikembangkan, dikelola, dan di-extend ke fase berikutnya.
+PERANGKAT LUNAK INI DISEDIAKAN "SEBAGAIMANA ADANYA", TANPA JAMINAN DALAM BENTUK APA PUN, BAIK TERSURAT MAUPUN TERSIRAT, TERMASUK NAMUN TIDAK TERBATAS PADA JAMINAN KELAYAKAN UNTUK DIPERJUALBELIKAN, KESESUAIAN UNTUK TUJUAN TERTENTU, DAN TIDAK ADANYA PELANGGARAN HAK. DALAM KEADAAN APA PUN, PENULIS ATAU PEMEGANG HAK CIPTA TIDAK BERTANGGUNG JAWAB ATAS KLAIM, KERUGIAN, ATAU TANGGUNG JAWAB LAIN, BAIK DALAM TINDAKAN KONTRAK, TINDAKAN MELANGGAR HUKUM, ATAU LAINNYA, YANG TIMBUL DARI, DILUAR, ATAU SEHUBUNGAN DENGAN PERANGKAT LUNAK ATAU PENGGUNAAN ATAU HAL LAIN DALAM PERANGKAT LUNAK TERSEBUT.
