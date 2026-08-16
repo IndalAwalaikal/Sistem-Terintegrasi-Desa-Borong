@@ -1,0 +1,1 @@
+ALTER TABLE `perangkat_desa` MODIFY `foto` VARCHAR(2048) NOT NULL;

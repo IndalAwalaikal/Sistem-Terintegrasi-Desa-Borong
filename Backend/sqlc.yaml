@@ -1,0 +1,12 @@
+version: "2"
+sql:
+  - engine: "mysql"
+    queries: "internal/infrastructure/mysql/sqlc/queries"
+    schema: "migrations"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/infrastructure/mysql/sqlc"
+        sql_package: "database/sql"
+        emit_json_tags: true
+        emit_interface: true

@@ -1,0 +1,103 @@
+# =====================================================================================
+# Docker Compose — Website Desa Borong (Frontend + Backend + Database)
+# Jalankan:  docker compose up --build -d
+# Hentikan:  docker compose down -v   (hapus juga volume data DB)
+# =====================================================================================
+services:
+  # ------------------------------------------------------------------ MySQL
+  mysql:
+    image: mysql:8.4
+    container_name: desaborong-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_ROOT_HOST: '%'
+    # Pastikan charset & collation konsisten dengan SPEC (utf8mb4 / utf8mb4_unicode_ci)
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--explicit-defaults-for-timestamp=1"]
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+
+  # ----------------------------------------------------------- Migrator (golang-migrate)
+  migrate:
+    image: migrate/migrate:v4.16.2
+    container_name: desaborong-migrate
+    restart: "no"
+    env_file: ./.env
+    environment:
+      DB_HOST: mysql
+    command: [
+      "-path", "/migrations",
+      "-database", "mysql://${DB_USER}:${DB_PASSWORD}@tcp(mysql:3306)/${DB_NAME}?multiStatements=true&parseTime=true",
+      "-verbose", "up"
+    ]
+    volumes:
+      - ./Backend/migrations:/migrations:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  # ----------------------------------------------------------- Backend API (Go)
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: desaborong-backend
+    restart: unless-stopped
+    env_file: ./.env
+    environment:
+      # Pastikan backend selalu menghubung ke service Docker "mysql" (bukan localhost)
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      # File upload disimpan di volume agar persisten & bisa di-serve kembali
+      FILE_STORAGE_PATH: /app/uploads
+      # CORS: izinkan browser di host lokal mengakses API
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    volumes:
+      - uploads:/app/uploads
+    # Port 8080 di host sering dipakai proyek lain; remap ke 8088 untuk local.
+    # Frontend tetap bisa hubungi backend lewat nama service "backend:8080" (internal network).
+    ports:
+      - "8088:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # ----------------------------------------------------------- Frontend (Next.js)
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: /api
+        API_INTERNAL_URL: http://backend:8080
+        NEXT_PUBLIC_APP_NAME: "Website Desa Borong"
+        NEXT_PUBLIC_SITE_URL: http://localhost:3000
+    container_name: desaborong-frontend
+    restart: unless-stopped
+    environment:
+      # NEXT_PUBLIC_* sudah ter-inject ke bundle saat build;
+      # ini diset lagi di runtime untuk server-side rendering (SSR).
+      NEXT_PUBLIC_API_BASE_URL: /api
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      API_INTERNAL_URL: http://backend:8080
+    ports:
+      - "3300:3000"
+    depends_on:
+      backend:
+        condition: service_started
+
+# ----------------------------------------------------------------------- Volumes
+volumes:
+  mysql_data:
+  uploads:

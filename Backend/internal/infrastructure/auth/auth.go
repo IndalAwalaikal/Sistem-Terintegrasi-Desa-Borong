@@ -1,0 +1,55 @@
+package auth
+
+import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"fmt"
+	"github.com/golang-jwt/jwt/v5"
+	"time"
+
+	"desa-borong-api/internal/domain"
+)
+
+type Claims struct {
+	Role string `json:"role"`
+	jwt.RegisteredClaims
+}
+type Service struct {
+	secret []byte
+	ttl    time.Duration
+}
+
+func New(secret string, ttl time.Duration) *Service { return &Service{[]byte(secret), ttl} }
+func (s *Service) IssueAccess(id string, role domain.Role) (string, time.Time, error) {
+	exp := time.Now().Add(s.ttl)
+	t := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{Role: string(role), RegisteredClaims: jwt.RegisteredClaims{Subject: id, ExpiresAt: jwt.NewNumericDate(exp), IssuedAt: jwt.NewNumericDate(time.Now())}})
+	v, e := t.SignedString(s.secret)
+	return v, exp, e
+}
+func (s *Service) HashRefresh(raw string) string { return Hash(raw) }
+func (s *Service) NewRefresh() (string, error)   { return NewRefresh() }
+func (s *Service) Parse(v string) (Claims, error) {
+	var c Claims
+	t, e := jwt.ParseWithClaims(v, &c, func(t *jwt.Token) (interface{}, error) {
+		if t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, fmt.Errorf("unexpected signing method")
+		}
+		return s.secret, nil
+	})
+	if e != nil || !t.Valid {
+		return c, fmt.Errorf("invalid access token")
+	}
+	return c, nil
+}
+func NewRefresh() (string, error) {
+	b := make([]byte, 32)
+	if _, e := rand.Read(b); e != nil {
+		return "", e
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+func Hash(v string) string {
+	x := sha256.Sum256([]byte(v))
+	return base64.RawStdEncoding.EncodeToString(x[:])
+}

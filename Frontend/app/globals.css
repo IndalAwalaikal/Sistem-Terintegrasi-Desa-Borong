@@ -1,0 +1,431 @@
+@import "tailwindcss";
+
+/* ===== DESIGN TOKENS — Desa Borong ===== */
+@theme {
+  /* Primary: Biru maritim Bulukumba */
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #2474d4;
+  --color-primary-600: #0b5dbb;
+  --color-primary-700: #0a478f;
+  --color-primary-800: #08376e;
+  --color-primary-900: #061f46;
+
+  /* Secondary: Navy formal */
+  --color-secondary-50: #f1f5f9;
+  --color-secondary-100: #e2e8f0;
+  --color-secondary-200: #cbd5e1;
+  --color-secondary-300: #94a3b8;
+  --color-secondary-400: #64748b;
+  --color-secondary-500: #334e75;
+  --color-secondary-600: #243d63;
+  --color-secondary-700: #1b3152;
+  --color-secondary-800: #112642;
+  --color-secondary-900: #081a33;
+
+  /* Accent: Kuning / Oranye */
+  --color-accent-50: #fffbeb;
+  --color-accent-100: #fef3c7;
+  --color-accent-200: #fde68a;
+  --color-accent-300: #fcd34d;
+  --color-accent-400: #fbbf24;
+  --color-accent-500: #f59e0b;
+  --color-accent-600: #d97706;
+  --color-accent-700: #b45309;
+
+  /* Semantic */
+  --color-success: #16a34a;
+  --color-warning: #f59e0b;
+  --color-danger: #dc2626;
+  --color-info: #2563eb;
+
+  /* Neutral */
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+  --color-neutral-950: #0a0a0a;
+
+  /* Font */
+  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
+
+  /* Spacing */
+  --spacing-18: 4.5rem;
+  --spacing-88: 22rem;
+  --spacing-100: 25rem;
+  --spacing-120: 30rem;
+
+  /* Border radius */
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  /* Animation */
+  --animate-fade-in: fade-in 0.6s ease-out;
+  --animate-fade-in-up: fade-in-up 0.6s ease-out;
+  --animate-fade-in-down: fade-in-down 0.4s ease-out;
+  --animate-slide-in-left: slide-in-left 0.5s ease-out;
+  --animate-slide-in-right: slide-in-right 0.5s ease-out;
+  --animate-scale-in: scale-in 0.3s ease-out;
+  --animate-count-up: count-up 2s ease-out;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+  --animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
+  --animate-reveal: reveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ===== KEYFRAMES ===== */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes page-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes line-draw {
+  from { transform: scaleX(0); transform-origin: left; }
+  to { transform: scaleX(1); transform-origin: left; }
+}
+
+@keyframes ticker-scroll {
+  from { transform: translate3d(-50%, 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+/* ===== DARK MODE ===== */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ===== BASE STYLES ===== */
+@layer base {
+  * {
+    @apply border-neutral-200 dark:border-neutral-700;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-slate-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100;
+    @apply font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight;
+  }
+
+  main > div {
+    animation: page-enter 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  ::selection {
+    @apply bg-primary-500/20 text-primary-900 dark:text-primary-100;
+  }
+}
+
+/* ===== PRINT — surat & unduh PDF (A4) ===== */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  body {
+    background: #ffffff !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  #surat-cetak,
+  #surat-cetak * {
+    visibility: visible;
+  }
+  #surat-cetak {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: auto;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* ===== CUSTOM UTILITIES ===== */
+@layer utilities {
+  .glass {
+    @apply bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl;
+    @apply border border-white/20 dark:border-neutral-700/30;
+  }
+
+  .glass-dark {
+    @apply bg-neutral-900/70 backdrop-blur-xl;
+    @apply border border-white/10;
+  }
+
+  .gradient-primary {
+    @apply bg-gradient-to-r from-primary-800 via-primary-600 to-primary-500;
+  }
+
+  .gradient-hero {
+    @apply bg-gradient-to-br from-primary-900 via-primary-700 to-secondary-600;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-secondary-600;
+  }
+
+  .text-shadow {
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .text-shadow-lg {
+    text-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Hide scrollbar */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Container with max width and padding */
+    .container-desa {
+    @apply mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8;
+  }
+
+  .eyebrow {
+    @apply text-[11px] font-bold uppercase tracking-[0.18em] text-primary-600 dark:text-primary-300;
+  }
+
+  .section-heading {
+    @apply relative pb-4;
+  }
+
+  .section-heading::after {
+    content: '';
+    @apply absolute bottom-0 left-0 h-0.5 w-12 bg-primary-600;
+    animation: line-draw 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .public-masthead::after {
+    content: '';
+    position: absolute;
+    right: 16%;
+    bottom: -70px;
+    width: 180px;
+    height: 180px;
+    border: 1px solid rgba(255,255,255,.11);
+    border-radius: 999px;
+  }
+
+  .editorial-copy > p:first-child::first-letter {
+    float: left;
+    margin: 0.06em 0.14em 0 0;
+    color: #0b5dbb;
+    font-family: Georgia, serif;
+    font-size: 3.8em;
+    font-weight: 700;
+    line-height: .82;
+  }
+}
+
+/* Modern marquee: dua salinan konten memastikan perulangan tanpa jeda. */
+.ticker-track {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  animation: ticker-scroll 26s linear infinite !important;
+  will-change: transform;
+}
+
+.ticker-group {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 3rem;
+  padding-right: 3rem;
+  white-space: nowrap;
+}
+
+.ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: .75rem;
+}
+
+.ticker-track:hover { animation-play-state: paused !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dashboard admin memakai permukaan terang agar tabel, angka, dan status mudah dipindai. */
+.admin-shell .bg-neutral-900 { background-color: #ffffff !important; }
+.admin-shell .bg-neutral-950 { background-color: #f8fbff !important; }
+.admin-shell .bg-neutral-800 { background-color: #eef4fb !important; }
+.admin-shell .border-neutral-800, .admin-shell .divide-neutral-800 { border-color: #d9e5f3 !important; }
+.admin-shell .border-neutral-700 { border-color: #c9d8eb !important; }
+.admin-shell .text-white { color: #102a4f !important; }
+.admin-shell .text-neutral-300 { color: #385170 !important; }
+.admin-shell .text-neutral-200 { color: #28425f !important; }
+.admin-shell .text-neutral-400 { color: #61738b !important; }
+.admin-shell .text-neutral-500 { color: #718198 !important; }
+.admin-shell .hover\:bg-neutral-800\/50:hover, .admin-shell .hover\:bg-neutral-800\/70:hover { background-color: #edf5ff !important; }
+.admin-shell .text-emerald-300 { color: #047857 !important; }
+.admin-shell .text-emerald-400 { color: #047857 !important; }
+.admin-shell .text-amber-400 { color: #a04b00 !important; }
+.admin-shell .text-rose-400 { color: #be123c !important; }
+/* Aksi berisi warna tetap memakai teks putih; jangan ikut aturan teks konten card. */
+.admin-shell main button.text-white,
+.admin-shell main a .text-white,
+.admin-shell main [class*="bg-primary-"] .text-white,
+.admin-shell main [class*="bg-secondary-"] .text-white {
+  color: #ffffff !important;
+}
+.admin-shell aside.bg-neutral-900 { background-color: #09254b !important; }
+.admin-shell aside .bg-neutral-800 { background-color: #103966 !important; }
+.admin-shell aside .bg-neutral-950 { background-color: #071d3b !important; }
+.admin-shell aside .text-white { color: #ffffff !important; }
+.admin-shell aside .text-neutral-300 { color: #d6e5f7 !important; }
+.admin-shell aside .text-neutral-400, .admin-shell aside .text-neutral-500 { color: #91b0d4 !important; }
+
+/* Kontras minimum untuk informasi sekunder pada seluruh halaman tema terang. */
+html:not(.dark) .text-neutral-400 { color: #64748b; }
+html:not(.dark) .text-neutral-300 { color: #52677f; }
+html:not(.dark) .text-primary-400 { color: #0b5dbb; }
+html:not(.dark) .text-emerald-400 { color: #047857; }
+html:not(.dark) .text-amber-400 { color: #a04b00; }
+html:not(.dark) .text-sky-400 { color: #0284c7; }
+html:not(.dark) .text-purple-400 { color: #7e22ce; }
+html:not(.dark) .text-neutral-500 { color: #475569; }
+
+/* Pada seksi berlatar gelap di tema terang, pastikan teks tetap terbaca
+   (membatalkan efek pencerahan global di atas). */
+html:not(.dark) .on-dark,
+html:not(.dark) .on-dark .text-neutral-200,
+html:not(.dark) .on-dark .text-neutral-300,
+html:not(.dark) .on-dark .text-neutral-400,
+html:not(.dark) .on-dark .text-neutral-500 {
+  color: #cbd5e1 !important;
+}
+html:not(.dark) .on-dark .text-neutral-300 { color: #d4d4d4 !important; }
+html:not(.dark) .on-dark .text-neutral-400,
+html:not(.dark) .on-dark .text-neutral-500 { color: #a3a3a3 !important; }
+html:not(.dark) .on-dark .text-neutral-200 { color: #e5e5e5 !important; }
+html:not(.dark) .on-dark .text-primary-200 { color: #bfdbfe !important; }
+html:not(.dark) .on-dark .text-primary-300 { color: #93c5fd !important; }
+html:not(.dark) .on-dark .text-primary-400 { color: #60a5fa !important; }
+html:not(.dark) .on-dark .text-accent-400 { color: #fbbf24 !important; }
+
+/* Override admin (tema terang) untuk warna sekunder sukuan chip statistik. */
+.admin-shell .text-sky-400 { color: #0369a1 !important; }
+.admin-shell .text-purple-400 { color: #7e22ce !important; }
+.admin-shell .text-blue-300 { color: #1d4ed8 !important; }
+.admin-shell .text-blue-400 { color: #2563eb !important; }
+
+/* ===== SCROLLBAR STYLING ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-neutral-100 dark:bg-neutral-900;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-neutral-300 dark:bg-neutral-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-neutral-400 dark:bg-neutral-500;
+}
+
+/* Toast Slide-In Animation */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

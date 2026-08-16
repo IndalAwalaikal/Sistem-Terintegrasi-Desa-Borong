@@ -1,0 +1,65 @@
+import type { Umkm } from '@/types/umkm';
+
+export const mockUmkm: Umkm[] = [
+  {
+    id: 'umkm-001',
+    slug: 'hasil-tani-borong',
+    namaUsaha: 'Hasil Tani Borong',
+    pemilik: 'Andi Rahman',
+    kategori: 'Pertanian',
+    deskripsi: 'Produk pertanian pilihan warga Desa Borong yang dipanen dan diolah dengan perhatian pada kualitas.',
+    foto: [
+      'https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=800&q=80',
+      'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=80',
+    ],
+    kontak: '0812-4567-8901',
+    alamat: 'Desa Borong, Kecamatan Herlang, Kabupaten Bulukumba',
+    produkUnggulan: ['Beras Lokal', 'Sayuran Segar', 'Olahan Hasil Tani'],
+    jamOperasional: '08.00 - 18.00 WITA',
+  },
+  {
+    id: 'umkm-002',
+    slug: 'kriya-borong-ibu-nur',
+    namaUsaha: 'Kriya Borong Ibu Nur',
+    pemilik: 'Nurhayati',
+    kategori: 'Kerajinan & Fashion',
+    deskripsi: 'Kerajinan tangan warga dengan pengerjaan rapi untuk kebutuhan sehari-hari dan buah tangan.',
+    foto: [
+      'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=800&q=80',
+    ],
+    kontak: '0821-9876-5432',
+    alamat: 'Desa Borong, Kecamatan Herlang, Kabupaten Bulukumba',
+    produkUnggulan: ['Tas Anyaman', 'Kain Hias', 'Souvenir Handmade'],
+    jamOperasional: '09.00 - 17.00 WITA',
+  },
+  {
+    id: 'umkm-003',
+    slug: 'kayu-kreasi-borong',
+    namaUsaha: 'Kayu Kreasi Borong',
+    pemilik: 'Syarifuddin',
+    kategori: 'Kerajinan & Souvenir',
+    deskripsi: 'Kerajinan kayu buatan warga untuk dekorasi rumah dan cenderamata kegiatan keluarga.',
+    foto: [
+      'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800&q=80',
+    ],
+    kontak: '0852-3344-5566',
+    alamat: 'Desa Borong, Kecamatan Herlang, Kabupaten Bulukumba',
+    produkUnggulan: ['Hiasan Dinding', 'Rak Kayu', 'Souvenir'],
+    jamOperasional: '08.00 - 20.00 WITA',
+  },
+  {
+    id: 'umkm-004',
+    slug: 'dapur-rasa-borong',
+    namaUsaha: 'Dapur Rasa Borong',
+    pemilik: 'Hj. Fatmawati',
+    kategori: 'Kuliner & Resto',
+    deskripsi: 'Kuliner rumahan khas Sulawesi Selatan dengan menu harian yang segar dan ramah untuk keluarga.',
+    foto: [
+      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80',
+    ],
+    kontak: '0813-7788-9900',
+    alamat: 'Jl. Poros Borong No. 15, Desa Borong',
+    produkUnggulan: ['Ikan Bakar', 'Nasi Kuning', 'Kue Tradisional'],
+    jamOperasional: '10.00 - 21.00 WITA',
+  },
+];
