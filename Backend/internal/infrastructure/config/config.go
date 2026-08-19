@@ -14,6 +14,8 @@ type Config struct {
 	CORSOrigins                                                                               []string
 	BrevoAPIKey                                                                               string
 	BrevoFromEmail                                                                            string
+	FlowKirimAPIKey                                                                           string
+	FlowKirimBaseURL                                                                          string
 	AppURL                                                                                    string
 	OTPTTL                                                                                    time.Duration
 }
@@ -25,7 +27,7 @@ func get(k, d string) string {
 	return d
 }
 func Load() (Config, error) {
-	a, err := time.ParseDuration(get("JWT_ACCESS_TTL", "15m"))
+	a, err := time.ParseDuration(get("JWT_ACCESS_TTL", "24h"))
 	if err != nil {
 		return Config{}, fmt.Errorf("JWT_ACCESS_TTL: %w", err)
 	}
@@ -72,8 +74,9 @@ func Load() (Config, error) {
 	}
 	c.BrevoAPIKey = os.Getenv("BREVO_API_KEY")
 	c.BrevoFromEmail = get("BREVO_FROM_EMAIL", "no-reply@desaborong.id")
+	c.FlowKirimAPIKey = os.Getenv("FLOWKIRIM_API_KEY")
+	c.FlowKirimBaseURL = os.Getenv("FLOWKIRIM_BASE_URL")
 	c.AppURL = strings.TrimRight(get("APP_URL", "http://localhost:3300"), "/")
 	c.OTPTTL = otpt
 	return c, nil
 }
-

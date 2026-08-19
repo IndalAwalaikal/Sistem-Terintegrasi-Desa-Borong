@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { DynamicImage } from "@/components/ui/DynamicImage";
 import { formatTanggal } from "@/lib/utils/format";
 import SuratTemplate from "@/components/surat/SuratTemplate";
 import { useToastStore } from "@/store/toastStore";
@@ -33,7 +34,9 @@ import {
   Trash2,
   AlertTriangle,
   Download,
+  Printer,
 } from "lucide-react";
+
 
 const BULAN_ROMAWI = [
   "",
@@ -78,6 +81,7 @@ export default function DashboardPengajuanPage() {
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("semua");
+  const [sortBy, setSortBy] = useState<'tanggal-desc' | 'tanggal-asc' | 'nama-asc' | 'nama-desc' | 'status'>('tanggal-desc');
 
   // Status Change Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -179,12 +183,38 @@ export default function DashboardPengajuanPage() {
     }
   };
 
+  /** Cetak surat via browser print dialog — hanya SuratTemplate yang tercetak. */
+  const handlePrintSurat = (surat: PengajuanSurat) => {
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) return;
+    const container = document.getElementById('surat-print-content');
+    if (!container) return;
+    printWindow.document.write(`
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Surat Resmi — ${surat.jenisSuratNama}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Georgia, 'Times New Roman', serif; background: #fff; color: #000; }
+    @page { size: A4; margin: 14mm; }
+  </style>
+</head>
+<body>${container.innerHTML}</body>
+</html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 400);
+  };
+
   const openActionModal = (item: PengajuanSurat, status: StatusPengajuan) => {
     setSelected(item);
     setTargetStatus(status);
     setCatatan("");
     setModalOpen(true);
   };
+
 
   const openPublishModal = (item: PengajuanSurat) => {
     setSelected(item);
@@ -213,12 +243,14 @@ export default function DashboardPengajuanPage() {
         "Admin Desa",
       );
       setList((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      const freshList = await getAllPengajuanAdmin();
+      setList(freshList);
       setModalOpen(false);
       showSuccess(
         `Status permohonan surat berhasil diubah ke "${targetStatus.toUpperCase()}"!`,
       );
-    } catch (err: any) {
-      showError(err.message || "Gagal mengubah status.");
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "Gagal mengubah status.");
     } finally {
       setSubmitting(false);
     }
@@ -237,6 +269,8 @@ export default function DashboardPengajuanPage() {
       setList((prev) =>
         prev.map((entry) => (entry.id === updated.id ? updated : entry)),
       );
+      const freshList = await getAllPengajuanAdmin();
+      setList(freshList);
       setPublishModalOpen(false);
       showSuccess(
         `Surat resmi berhasil diterbitkan dengan Nomor: ${nomorSuratInput}!`,
@@ -255,12 +289,13 @@ export default function DashboardPengajuanPage() {
     setSubmitting(true);
     try {
       await deletePengajuanAdmin(selectedToDelete.id);
-      setList((prev) => prev.filter((p) => p.id !== selectedToDelete.id));
+      const freshList = await getAllPengajuanAdmin();
+      setList(freshList);
       setDeleteModalOpen(false);
       setSelectedToDelete(null);
       showSuccess("Permohonan surat berhasil dihapus secara permanen!");
-    } catch (err: any) {
-      showError(err.message || "Gagal menghapus pengajuan surat.");
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "Gagal menghapus pengajuan surat.");
     } finally {
       setSubmitting(false);
     }
@@ -275,6 +310,19 @@ export default function DashboardPengajuanPage() {
     const matchesStatus =
       filterStatus === "semua" || item.status === filterStatus;
     return matchesSearch && matchesStatus;
+  });
+
+  const STATUS_ORDER: Record<string, number> = {
+    diajukan: 0, diverifikasi: 1, diproses: 2, selesai: 3, ditolak: 4,
+  };
+  const sortedList = [...filteredList].sort((a, b) => {
+    switch (sortBy) {
+      case 'tanggal-asc':  return new Date(a.dibuatPada).getTime() - new Date(b.dibuatPada).getTime();
+      case 'nama-asc':     return a.pemohonNama.localeCompare(b.pemohonNama, 'id');
+      case 'nama-desc':    return b.pemohonNama.localeCompare(a.pemohonNama, 'id');
+      case 'status':       return (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99);
+      default:             return new Date(b.dibuatPada).getTime() - new Date(a.dibuatPada).getTime();
+    }
   });
 
   return (
@@ -326,17 +374,33 @@ export default function DashboardPengajuanPage() {
             </button>
           ))}
         </div>
+        {/* Sort Control */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-xs text-neutral-500 font-medium hidden sm:inline">Urut:</span>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            className="text-xs font-bold bg-neutral-100 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-1.5 text-neutral-700 dark:text-neutral-300 focus:outline-none focus:border-primary-500 transition-colors"
+            aria-label="Urutkan daftar pengajuan"
+          >
+            <option value="tanggal-desc">Terbaru</option>
+            <option value="tanggal-asc">Terlama</option>
+            <option value="nama-asc">Nama A→Z</option>
+            <option value="nama-desc">Nama Z→A</option>
+            <option value="status">Per Status</option>
+          </select>
+        </div>
       </div>
 
       {/* Pengajuan Cards List */}
       <div className="space-y-4">
-        {filteredList.length === 0 ? (
+        {sortedList.length === 0 ? (
           <div className="p-8 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 text-xs">
             Tidak ada data permohonan surat yang cocok dengan pencarian /
             filter.
           </div>
         ) : (
-          filteredList.map((item) => (
+          sortedList.map((item) => (
             <Card
               key={item.id}
               className="p-5 sm:p-6 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-neutral-100 space-y-4 shadow-sm rounded-2xl"
@@ -752,11 +816,20 @@ export default function DashboardPengajuanPage() {
       >
         {previewSurat && (
           <div className="space-y-4">
-            <div className="p-2 sm:p-4 bg-neutral-100 dark:bg-neutral-950 rounded-xl overflow-x-auto">
+            <div id="surat-print-content" className="p-2 sm:p-4 bg-neutral-100 dark:bg-neutral-950 rounded-xl overflow-x-auto">
               <SuratTemplate surat={previewSurat} />
             </div>
-            <div className="flex justify-end pt-2">
-              <Button variant="outline" onClick={() => setPreviewSurat(null)}>
+            <div className="flex items-center justify-between pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePrintSurat(previewSurat)}
+                className="gap-2"
+              >
+                <Printer className="w-4 h-4" />
+                Cetak / Export PDF
+              </Button>
+              <Button variant="ghost" onClick={() => setPreviewSurat(null)}>
                 Tutup Pratinjau
               </Button>
             </div>
@@ -807,7 +880,7 @@ export default function DashboardPengajuanPage() {
                     title={previewAttachment.nama}
                   />
                 ) : (
-                  <img
+                  <DynamicImage
                     src={previewUrl}
                     alt={previewAttachment.nama}
                     className="max-w-full max-h-[65vh] object-contain rounded-xl shadow-2xl"

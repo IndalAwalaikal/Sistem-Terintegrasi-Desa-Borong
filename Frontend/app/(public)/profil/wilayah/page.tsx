@@ -1,14 +1,17 @@
 import React from 'react';
 import Image from 'next/image';
-import { mockDusun, mockProfilDesa } from '@/lib/mock/desa.mock';
-import { Card, CardBody } from '@/components/ui/Card';
-import { MapPin, Users, Home, Compass, Globe, ExternalLink, Navigation, Building2 } from 'lucide-react';
+import { getDusunList } from '@/lib/services/desa.service';
+import type { Dusun } from '@/types/desa';
+import { Card } from '@/components/ui/Card';
+import { MapPin, Compass, Navigation, Building2 } from 'lucide-react';
 
 export const metadata = {
   title: 'Wilayah Administratif & Geografis Desa Borong',
 };
 
-export default function WilayahPage() {
+export default async function WilayahPage() {
+  const dusunList: Dusun[] = await getDusunList().catch(() => []);
+
   return (
     <div className="py-12 bg-neutral-50 dark:bg-neutral-950">
       <div className="container-desa space-y-12">
@@ -147,7 +150,7 @@ export default function WilayahPage() {
             Pembagian 4 Dusun di Desa Borong
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {mockDusun.map((dusun) => (
+            {dusunList.map((dusun) => (
               <Card key={dusun.id} hoverable className="p-6">
                 <div className="w-10 h-10 rounded-2xl bg-primary-100 dark:bg-primary-950 text-primary-600 flex items-center justify-center mb-4">
                   <MapPin className="w-5 h-5" />

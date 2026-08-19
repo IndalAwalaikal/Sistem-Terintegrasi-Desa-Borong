@@ -9,13 +9,15 @@ import {
 } from '@/lib/services/galeri.service';
 import type { GaleriAlbum } from '@/types/galeri';
 import { Card } from '@/components/ui/Card';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Modal } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatTanggal } from '@/lib/utils/format';
 import { useToastStore } from '@/store/toastStore';
-import { Image as ImageIcon, Plus, Edit, Trash2, Save, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, Calendar } from 'lucide-react';
 
 const KATEGORI_OPTIONS = ['budaya', 'pertanian', 'gotong-royong', 'umum'];
 
@@ -66,7 +68,6 @@ export default function DashboardGaleriPage() {
 
   useEffect(() => {
     void refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openAdd = () => {
@@ -93,14 +94,18 @@ export default function DashboardGaleriPage() {
     if (!form.judul.trim()) return;
     setSaving(true);
     try {
-      const fotos = parseFotoLines(form.fotos);
+      const albumTanggal = form.tanggal || new Date().toISOString().slice(0, 10);
+      const fotos = parseFotoLines(form.fotos).map((f) => ({
+        ...f,
+        tanggal: albumTanggal,
+      }));
       const coverFoto = form.coverFoto.trim() || fotos[0]?.url || '';
       if (!coverFoto) throw new Error('Tambahkan cover atau minimal satu URL foto.');
       const payload = {
         judul: form.judul,
         deskripsi: form.deskripsi,
         kategori: form.kategori || undefined,
-        tanggal: form.tanggal || new Date().toISOString().slice(0, 10),
+        tanggal: albumTanggal,
         coverFoto,
         fotos,
       };
@@ -114,21 +119,30 @@ export default function DashboardGaleriPage() {
       }
       setModalOpen(false);
       await refresh();
-    } catch (err: any) {
-      showError(err.message || 'Gagal menyimpan album.');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Gagal menyimpan album.');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (album: GaleriAlbum) => {
-    if (!confirm(`Hapus album "${album.judul}"?`)) return;
+  const [deleteTarget, setDeleteTarget] = useState<GaleriAlbum | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = (album: GaleriAlbum) => setDeleteTarget(album);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await deleteGaleriAlbumAdmin(album.id);
+      await deleteGaleriAlbumAdmin(deleteTarget.id);
       showSuccess('Album galeri berhasil dihapus.');
       await refresh();
-    } catch (err: any) {
-      showError(err.message || 'Gagal menghapus album.');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Gagal menghapus album.');
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -148,7 +162,11 @@ export default function DashboardGaleriPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-neutral-500">Memuat galeri...</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Skeleton className="h-56 w-full rounded-2xl" />
+          <Skeleton className="h-56 w-full rounded-2xl" />
+          <Skeleton className="h-56 w-full rounded-2xl" />
+        </div>
       ) : albums.length === 0 ? (
         <Card className="p-10 text-center text-sm text-neutral-500">Belum ada album galeri.</Card>
       ) : (
@@ -223,6 +241,15 @@ export default function DashboardGaleriPage() {
           </Button>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Hapus Album"
+        message={<>Yakin ingin menghapus album <strong>&quot;{deleteTarget?.judul}&quot;</strong>? Tindakan ini tidak dapat dibatalkan.</>}
+        isLoading={deleting}
+        onConfirm={() => void handleConfirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

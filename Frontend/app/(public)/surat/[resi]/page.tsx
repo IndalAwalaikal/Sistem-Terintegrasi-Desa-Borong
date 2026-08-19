@@ -7,6 +7,7 @@ import { ArrowLeft, Printer } from 'lucide-react';
 import { getSuratByResi } from '@/lib/services/persuratan.service';
 import SuratTemplate from '@/components/surat/SuratTemplate';
 import { Button } from '@/components/ui/Button';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { PengajuanSurat } from '@/types/persuratan';
 
 export default function PreviewSuratPage() {
@@ -34,8 +35,19 @@ export default function PreviewSuratPage() {
     };
   }, [resi]);
 
-  if (state === 'loading')
-    return <div className="min-h-[60vh] flex items-center justify-center text-neutral-500">Memuat surat…</div>;
+    if (state === 'loading')
+    return (
+      <div className="min-h-[60vh] bg-neutral-50 dark:bg-neutral-950 flex items-center justify-center">
+        <div className="w-full max-w-3xl mx-auto space-y-6 p-6">
+          <Skeleton variant="rectangular" className="h-10 w-40 rounded-xl" />
+          <Skeleton variant="rectangular" className="h-5 w-full rounded" />
+          <div className="grid grid-cols-2 gap-4">
+            <Skeleton variant="rectangular" className="h-72 w-full rounded-2xl" />
+            <Skeleton variant="rectangular" className="h-72 w-full rounded-2xl" />
+          </div>
+        </div>
+      </div>
+    );
   if (state === '404' || !surat)
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 text-neutral-500">

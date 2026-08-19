@@ -11,12 +11,9 @@ import {
   Clock,
   ArrowRightLeft,
   ShieldCheck,
-  Building2,
   Printer,
   ArrowLeft,
   AlertCircle,
-  FileCheck,
-  Building,
   UserCheck,
   History,
 } from 'lucide-react';
@@ -86,7 +83,7 @@ export default function BuktiPajakPage({ params }: { params: Promise<{ nomorBukt
           </p>
           <Link
             href="/informasi/pajak"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-primary-600 text-white font-bold text-xs hover:bg-primary-700 transition"
           >
             <ArrowLeft className="w-4 h-4" /> Kembali ke Transparansi Pajak
           </Link>
@@ -95,7 +92,7 @@ export default function BuktiPajakPage({ params }: { params: Promise<{ nomorBukt
     );
   }
 
-  const { transaksi, setoran, audits } = data;
+  const { transaksi, setoran } = data;
 
   const isDiverifikasi = ['diverifikasi', 'disetor', 'dikonfirmasi_bpd'].includes(transaksi.status);
   const isDisetor = ['disetor', 'dikonfirmasi_bpd'].includes(transaksi.status);
@@ -109,14 +106,14 @@ export default function BuktiPajakPage({ params }: { params: Promise<{ nomorBukt
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 print:hidden">
           <Link
             href="/informasi/pajak"
-            className="inline-flex items-center gap-2 text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:text-emerald-600 transition"
+            className="inline-flex items-center gap-2 text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:text-primary-600 transition"
           >
             <ArrowLeft className="w-4 h-4" /> Kembali ke Transparansi Pajak
           </Link>
 
           <button
             onClick={handlePrint}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-lg shadow-emerald-600/20 transition"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-primary-600 hover:bg-primary-500 text-white font-extrabold text-xs shadow-lg shadow-primary-600/20 transition"
           >
             <Printer className="w-4 h-4" /> Cetak Bukti Resi Pajak
           </button>
@@ -128,7 +125,7 @@ export default function BuktiPajakPage({ params }: { params: Promise<{ nomorBukt
             {/* Header Instansi */}
             <div className="flex flex-col sm:flex-row items-center justify-between border-b-2 border-dashed border-neutral-200 dark:border-neutral-800 pb-6 text-center sm:text-left gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-700 text-white flex items-center justify-center font-black text-xl shadow-md">
+                <div className="w-14 h-14 rounded-2xl bg-primary-700 text-white flex items-center justify-center font-black text-xl shadow-md">
                   DB
                 </div>
                 <div>
@@ -146,7 +143,7 @@ export default function BuktiPajakPage({ params }: { params: Promise<{ nomorBukt
 
               <div className="text-right">
                 <div className="text-xs font-bold text-neutral-500">Nomor Bukti Resi:</div>
-                <div className="text-lg font-mono font-black text-emerald-600 dark:text-emerald-400">
+                <div className="text-lg font-mono font-black text-primary-600 dark:text-primary-400">
                   {transaksi.nomorBukti}
                 </div>
                 <div className="text-[10px] text-neutral-400 mt-0.5">
@@ -159,11 +156,11 @@ export default function BuktiPajakPage({ params }: { params: Promise<{ nomorBukt
             <div className="flex flex-col sm:flex-row items-center justify-between p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 gap-3">
               <div className="flex items-center gap-3">
                 {isDikonfirmasi ? (
-                  <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-700 flex items-center justify-center">
                     <CheckCircle2 className="w-6 h-6" />
                   </div>
                 ) : isDisetor ? (
-                  <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-secondary-100 text-secondary-700 flex items-center justify-center">
                     <ArrowRightLeft className="w-6 h-6" />
                   </div>
                 ) : isDiverifikasi ? (
@@ -175,7 +172,7 @@ export default function BuktiPajakPage({ params }: { params: Promise<{ nomorBukt
                     <AlertCircle className="w-6 h-6" />
                   </div>
                 ) : (
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-700 flex items-center justify-center">
                     <Clock className="w-6 h-6" />
                   </div>
                 )}
@@ -200,7 +197,7 @@ export default function BuktiPajakPage({ params }: { params: Promise<{ nomorBukt
 
               <div className="text-right">
                 <span className="text-xs font-bold text-neutral-500">Nominal Pajak:</span>
-                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                <div className="text-2xl font-black text-primary-600 dark:text-primary-400">
                   {formatRupiah(transaksi.nominal)}
                 </div>
               </div>
@@ -210,7 +207,7 @@ export default function BuktiPajakPage({ params }: { params: Promise<{ nomorBukt
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
               <div className="space-y-3 bg-neutral-50/70 dark:bg-neutral-950/70 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 text-xs">
                 <h4 className="font-extrabold text-neutral-900 dark:text-white border-b border-neutral-200 dark:border-neutral-800 pb-2 flex items-center gap-1.5">
-                  <UserCheck className="w-4 h-4 text-emerald-600" /> Data Wajib Pajak
+                  <UserCheck className="w-4 h-4 text-primary-600" /> Data Wajib Pajak
                 </h4>
                 <div className="grid grid-cols-3 gap-1">
                   <span className="text-neutral-500">Nama Lengkap:</span>
@@ -234,7 +231,7 @@ export default function BuktiPajakPage({ params }: { params: Promise<{ nomorBukt
 
               <div className="space-y-3 bg-neutral-50/70 dark:bg-neutral-950/70 p-4 rounded-2xl border border-neutral-100 dark:border-neutral-800 text-xs">
                 <h4 className="font-extrabold text-neutral-900 dark:text-white border-b border-neutral-200 dark:border-neutral-800 pb-2 flex items-center gap-1.5">
-                  <Receipt className="w-4 h-4 text-emerald-600" /> Rincian Pembayaran
+                  <Receipt className="w-4 h-4 text-primary-600" /> Rincian Pembayaran
                 </h4>
                 <div className="grid grid-cols-3 gap-1">
                   <span className="text-neutral-500">Jenis Pajak:</span>
@@ -266,13 +263,13 @@ export default function BuktiPajakPage({ params }: { params: Promise<{ nomorBukt
             {/* End-to-End Tracking Timeline */}
             <div className="space-y-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
               <h3 className="text-sm font-extrabold text-neutral-900 dark:text-white flex items-center gap-2">
-                <History className="w-4 h-4 text-emerald-600" /> Alur Audit &amp; Tracking Penyetoran End-to-End
+                <History className="w-4 h-4 text-primary-600" /> Alur Audit &amp; Tracking Penyetoran End-to-End
               </h3>
 
               <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-neutral-200 dark:before:bg-neutral-800">
                 {/* Step 1: Pencatatan */}
                 <div className="relative">
-                  <div className="absolute -left-6 top-0.5 w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">
+                  <div className="absolute -left-6 top-0.5 w-5 h-5 rounded-full bg-primary-600 text-white flex items-center justify-center text-[10px] font-bold">
                     1
                   </div>
                   <div className="text-xs font-bold text-neutral-900 dark:text-white">
@@ -286,7 +283,7 @@ export default function BuktiPajakPage({ params }: { params: Promise<{ nomorBukt
                 {/* Step 2: Verifikasi */}
                 <div className="relative">
                   <div className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    isDiverifikasi ? 'bg-emerald-600 text-white' : 'bg-neutral-300 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
+                    isDiverifikasi ? 'bg-primary-600 text-white' : 'bg-neutral-300 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
                   }`}>
                     2
                   </div>
@@ -307,7 +304,7 @@ export default function BuktiPajakPage({ params }: { params: Promise<{ nomorBukt
                 {/* Step 3: Batch Penyetoran ke BPD */}
                 <div className="relative">
                   <div className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    isDisetor ? 'bg-emerald-600 text-white' : 'bg-neutral-300 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
+                    isDisetor ? 'bg-primary-600 text-white' : 'bg-neutral-300 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
                   }`}>
                     3
                   </div>
@@ -317,7 +314,7 @@ export default function BuktiPajakPage({ params }: { params: Promise<{ nomorBukt
                   <div className="text-[11px] text-neutral-500">
                     {setoran ? (
                       <>
-                        Nomor Batch Setoran: <code className="font-mono text-emerald-700 dark:text-emerald-400 font-bold">{setoran.nomorSetoran}</code> ({setoran.tujuan}) • Disetor pada {formatDate(setoran.tanggalSetor)} oleh {setoran.disetorOleh}
+                        Nomor Batch Setoran: <code className="font-mono text-primary-700 dark:text-primary-400 font-bold">{setoran.nomorSetoran}</code> ({setoran.tujuan}) • Disetor pada {formatDate(setoran.tanggalSetor)} oleh {setoran.disetorOleh}
                       </>
                     ) : (
                       'Belum dimasukkan ke dalam batch penyetoran BPD'
@@ -328,7 +325,7 @@ export default function BuktiPajakPage({ params }: { params: Promise<{ nomorBukt
                 {/* Step 4: Konfirmasi Penerimaan BPD */}
                 <div className="relative">
                   <div className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    isDikonfirmasi ? 'bg-emerald-600 text-white' : 'bg-neutral-300 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
+                    isDikonfirmasi ? 'bg-primary-600 text-white' : 'bg-neutral-300 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
                   }`}>
                     4
                   </div>
@@ -337,11 +334,11 @@ export default function BuktiPajakPage({ params }: { params: Promise<{ nomorBukt
                   </div>
                   <div className="text-[11px] text-neutral-500">
                     {setoran && setoran.status === 'dikonfirmasi' ? (
-                      <div className="mt-1 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 space-y-1">
-                        <div className="font-bold text-emerald-900 dark:text-emerald-300">
+                      <div className="mt-1 p-3 rounded-xl bg-primary-50 dark:bg-primary-950/60 border border-primary-200 dark:border-primary-800 space-y-1">
+                        <div className="font-bold text-primary-900 dark:text-primary-300">
                           Diterima Oleh: {setoran.diterimaOleh || 'BPD'} (No. Penerimaan: {setoran.nomorBuktiPenerimaan || '-'})
                         </div>
-                        <div className="text-[10px] text-emerald-700 dark:text-emerald-400">
+                        <div className="text-[10px] text-primary-700 dark:text-primary-400">
                           Dikonfirmasi pada {setoran.tglKonfirmasi ? formatDate(setoran.tglKonfirmasi) : '-'} {setoran.catatan ? `• ${setoran.catatan}` : ''}
                         </div>
                       </div>

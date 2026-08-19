@@ -6,6 +6,7 @@ import { getPengajuanByResi, type PengajuanTracking } from '@/lib/services/persu
 import type { StatusPengajuan } from '@/types/persuratan';
 import { AlertTriangle } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -163,8 +164,16 @@ function LacakContent() {
           </form>
         </Card>
 
+        {/* Loading state (pencarian resi bersifat asinkron) */}
+        {loading && (
+          <div className="space-y-4" aria-hidden="true">
+            <Skeleton className="h-32 w-full rounded-3xl" />
+            <Skeleton className="h-72 w-full rounded-3xl" />
+          </div>
+        )}
+
         {/* Results */}
-        {result === 'not_found' && (
+        {!loading && result === 'not_found' && (
           <Card className="p-8 text-center space-y-3 border-danger/30 bg-rose-50/50 dark:bg-rose-950/20">
             <AlertCircle className="w-12 h-12 text-danger mx-auto" />
             <h3 className="text-lg font-bold text-neutral-900 dark:text-white">{t('Lacak.notFoundTitle')}</h3>
@@ -174,7 +183,7 @@ function LacakContent() {
           </Card>
         )}
 
-        {typeof result === 'object' && result !== null && (
+        {!loading && typeof result === 'object' && result !== null && (
           <Card className="p-6 sm:p-8 space-y-8">
             {/* Header info */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-neutral-200 dark:border-neutral-800">
@@ -244,14 +253,14 @@ function LacakContent() {
             )}
 
             {/* Rejection Banner — shown prominently when rejected */}
-            {result.status === 'ditolak' && (result as any).catatanAdmin && (
+            {result.status === 'ditolak' && result.catatanAdmin && (
               <div className="flex items-start gap-3 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800">
                 <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <p className="text-sm font-bold text-rose-800 dark:text-rose-200">Permohonan Surat Ditolak</p>
                   <p className="text-xs text-rose-700 dark:text-rose-300 leading-relaxed">
                     <span className="font-semibold">Alasan: </span>
-                    {(result as any).catatanAdmin}
+                    {result.catatanAdmin}
                   </p>
                 </div>
               </div>

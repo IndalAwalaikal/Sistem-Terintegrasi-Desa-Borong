@@ -33,8 +33,8 @@ export default function ResetPasswordPage() {
       await resetPasswordService(email.trim(), code.trim(), passwordBaru);
       setSuccessMsg('Password berhasil diubah. Silakan masuk dengan password baru Anda.');
       setTimeout(() => router.push('/login'), 1500);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal mengatur ulang password. Periksa kembali kode verifikasi.');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Gagal mengatur ulang password. Periksa kembali kode verifikasi.');
     } finally {
       setLoading(false);
     }

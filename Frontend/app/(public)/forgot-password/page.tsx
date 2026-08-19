@@ -29,8 +29,8 @@ export default function ForgotPasswordPage() {
       await forgotPasswordService(email.trim());
       setSuccessMsg('Kode verifikasi telah dikirim ke email Anda. Silakan cek inbox/SPAM.');
       router.push(`/reset-password?email=${encodeURIComponent(email.trim())}`);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal mengirim kode reset. Coba lagi.');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Gagal mengirim kode reset. Coba lagi.');
     } finally {
       setLoading(false);
     }

@@ -1,7 +1,7 @@
 import { ApiError, apiRequest } from '@/lib/services/api';
 import type { GaleriAlbum } from '@/types/galeri';
 
-export async function getGaleriAlbumList(): Promise<GaleriAlbum[]> { return apiRequest<GaleriAlbum[]>('/galeri'); }
+export async function getGaleriAlbumList(): Promise<GaleriAlbum[]> { return apiRequest<GaleriAlbum[]>('/galeri', { revalidateSeconds: 60 }); }
 export async function getGaleriAlbumById(id: string): Promise<GaleriAlbum | null> {
   try { return await apiRequest<GaleriAlbum>(`/galeri/${encodeURIComponent(id)}`); }
   catch (error) { if (error instanceof ApiError && error.status === 404) return null; throw error; }

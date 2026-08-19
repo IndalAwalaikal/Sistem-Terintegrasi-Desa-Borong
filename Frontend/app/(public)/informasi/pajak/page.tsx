@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { pajakService } from "@/lib/services/pajak.service";
 import type { RingkasanPajak, TransaksiPajak, JenisPajak } from "@/types/pajak";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
+import { Select } from "@/components/ui/Select";
 import { formatRupiah, formatDate } from "@/lib/utils/format";
 import { getCurrentYear, getTahunOptions } from "@/lib/utils/date";
 import {
@@ -17,9 +18,7 @@ import {
   ShieldCheck,
   Building2,
   Calendar,
-  Filter,
   FileCheck,
-  ExternalLink,
   ChevronRight,
 } from "lucide-react";
 import {
@@ -39,7 +38,7 @@ import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
 import { Reveal } from "@/components/ui/Reveal";
 import { Skeleton } from "@/components/ui/Skeleton";
 
-const COLORS = ["#16a34a", "#2563eb", "#f59e0b", "#dc2626", "#8b5cf6"];
+const COLORS = ["#2474d4", "#0b5dbb", "#334e75", "#08376e", "#112642"];
 const TAHUN_OPTIONS = getTahunOptions();
 const BULAN_NAMES = [
   "Jan",
@@ -123,7 +122,7 @@ export default function PajakPublicPage() {
     switch (status) {
       case "tercatat":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-100 dark:bg-primary-950 text-primary-800 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
             <Clock className="w-3 h-3" /> Tercatat (Desa)
           </span>
         );
@@ -135,13 +134,13 @@ export default function PajakPublicPage() {
         );
       case "disetor":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-secondary-100 dark:bg-secondary-950 text-secondary-800 dark:text-secondary-300 border border-secondary-200 dark:border-secondary-800">
             <ArrowRightLeft className="w-3 h-3" /> Disetor ke BPD
           </span>
         );
       case "dikonfirmasi_bpd":
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-100 dark:bg-primary-950 text-primary-800 dark:text-primary-300 border border-primary-200 dark:border-primary-800">
             <CheckCircle2 className="w-3 h-3" /> Dikonfirmasi BPD
           </span>
         );
@@ -184,7 +183,7 @@ export default function PajakPublicPage() {
         {/* Header */}
         <Reveal>
           <div className="text-center max-w-3xl mx-auto space-y-3">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-800">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-100 dark:bg-primary-950 text-primary-700 dark:text-primary-300 text-xs font-bold border border-primary-200 dark:border-primary-800">
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Transparansi & Akuntabilitas Pajak Desa</span>
             </div>
@@ -204,7 +203,7 @@ export default function PajakPublicPage() {
           <Card className="p-6 bg-slate-900 text-white shadow-xl rounded-3xl border border-slate-800">
             <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
               <div className="space-y-2 text-center lg:text-left">
-                <div className="flex items-center justify-center lg:justify-start gap-2 text-emerald-300 font-bold text-xs uppercase tracking-wider">
+                <div className="flex items-center justify-center lg:justify-start gap-2 text-primary-300 font-bold text-xs uppercase tracking-wider">
                   <Receipt className="w-4 h-4" /> Cek Resi / Verifikasi Bukti
                   Bayar
                 </div>
@@ -231,13 +230,13 @@ export default function PajakPublicPage() {
                     value={searchNomor}
                     onChange={(e) => setSearchNomor(e.target.value)}
                     placeholder="Masukkan Nomor Bukti Resi Pajak..."
-                    className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold text-white placeholder-slate-400 outline-none focus:bg-white/10 focus:border-emerald-400 transition"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-sm font-semibold text-white placeholder-slate-400 outline-none focus:bg-white/10 focus:border-primary-400 transition"
                   />
-                  <Search className="w-4 h-4 text-emerald-300 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <Search className="w-4 h-4 text-primary-300 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 </div>
                 <button
                   type="submit"
-                  className="px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs shadow-sm transition flex items-center justify-center gap-2"
+                  className="px-6 py-3 rounded-2xl bg-primary-500 hover:bg-primary-400 text-white font-extrabold text-xs shadow-sm transition flex items-center justify-center gap-2"
                 >
                   <FileCheck className="w-4 h-4" /> Cek Bukti Resi
                 </button>
@@ -250,20 +249,16 @@ export default function PajakPublicPage() {
         <Reveal delay={60}>
           <div className="flex items-center justify-between bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
             <div className="flex items-center gap-2 text-sm font-bold text-neutral-800 dark:text-white">
-              <Calendar className="w-4 h-4 text-emerald-600" />
+              <Calendar className="w-4 h-4 text-primary-600" />
               <span>Tahun Anggaran Pajak:</span>
             </div>
-            <select
+            <Select
               value={selectedTahun}
               onChange={(e) => setSelectedTahun(Number(e.target.value))}
-              className="px-4 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs font-extrabold text-neutral-900 dark:text-white outline-none focus:border-emerald-500"
-            >
-              {TAHUN_OPTIONS.map((th) => (
-                <option key={th} value={th}>
-                  Tahun {th}
-                </option>
-              ))}
-            </select>
+              options={TAHUN_OPTIONS.map((th) => ({ value: String(th), label: `Tahun ${th}` }))}
+              wrapperClassName="w-auto"
+              className="px-4 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-xs font-extrabold focus:border-primary-500"
+            />
           </div>
         </Reveal>
 
@@ -273,10 +268,10 @@ export default function PajakPublicPage() {
             {/* Metric 1 */}
             <Card className="p-5 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-sm rounded-2xl border border-neutral-200 dark:border-neutral-800">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-bold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 px-2.5 py-0.5 rounded-full">
+                <span className="text-[11px] font-bold uppercase tracking-wider bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300 px-2.5 py-0.5 rounded-full">
                   Total Penerimaan
                 </span>
-                <Receipt className="w-5 h-5 text-emerald-600" />
+                <Receipt className="w-5 h-5 text-primary-600" />
               </div>
               <h3 className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white">
                 {loading ? (
@@ -319,10 +314,10 @@ export default function PajakPublicPage() {
             {/* Metric 3 */}
             <Card className="p-5 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-sm rounded-2xl border border-neutral-200 dark:border-neutral-800">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] font-bold uppercase tracking-wider bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 px-2.5 py-0.5 rounded-full">
+                <span className="text-[11px] font-bold uppercase tracking-wider bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300 px-2.5 py-0.5 rounded-full">
                   Belum Disetorkan
                 </span>
-                <Clock className="w-5 h-5 text-amber-600" />
+                <Clock className="w-5 h-5 text-primary-600" />
               </div>
               <h3 className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white">
                 {loading ? (
@@ -368,7 +363,7 @@ export default function PajakPublicPage() {
             <Card className="p-6 h-full" hoverable>
               <CardHeader className="px-0 pt-0 mb-4">
                 <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-emerald-600" /> Realisasi Per
+                  <Receipt className="w-4 h-4 text-primary-600" /> Realisasi Per
                   Jenis Pajak & Retribusi
                 </h3>
               </CardHeader>
@@ -508,41 +503,41 @@ export default function PajakPublicPage() {
                       setPage(1);
                     }}
                     placeholder="Cari NAMA / No. Bukti..."
-                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 text-xs text-neutral-900 dark:text-white outline-none focus:border-emerald-500"
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 text-xs text-neutral-900 dark:text-white outline-none focus:border-primary-500"
                   />
                   <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 </div>
 
-                <select
+                <Select
                   value={tableJenis}
                   onChange={(e) => {
                     setTableJenis(e.target.value);
                     setPage(1);
                   }}
-                  className="py-1.5 px-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 text-xs text-neutral-900 dark:text-white outline-none"
-                >
-                  <option value="">Semua Jenis Pajak</option>
-                  {jenisList.map((jp) => (
-                    <option key={jp.id} value={jp.id}>
-                      {jp.kode} - {jp.nama}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: '', label: 'Semua Jenis Pajak' },
+                    ...jenisList.map((jp) => ({ value: jp.id, label: `${jp.kode} - ${jp.nama}` })),
+                  ]}
+                  wrapperClassName="w-auto"
+                  className="py-1.5 px-3 rounded-xl bg-neutral-50 dark:bg-neutral-950 focus:border-primary-500"
+                />
 
-                <select
+                <Select
                   value={tableStatus}
                   onChange={(e) => {
                     setTableStatus(e.target.value);
                     setPage(1);
                   }}
-                  className="py-1.5 px-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 text-xs text-neutral-900 dark:text-white outline-none"
-                >
-                  <option value="">Semua Status</option>
-                  <option value="tercatat">Tercatat</option>
-                  <option value="diverifikasi">Diverifikasi</option>
-                  <option value="disetor">Disetor ke BPD</option>
-                  <option value="dikonfirmasi_bpd">Dikonfirmasi BPD</option>
-                </select>
+                  options={[
+                    { value: '', label: 'Semua Status' },
+                    { value: 'tercatat', label: 'Tercatat' },
+                    { value: 'diverifikasi', label: 'Diverifikasi' },
+                    { value: 'disetor', label: 'Disetor ke BPD' },
+                    { value: 'dikonfirmasi_bpd', label: 'Dikonfirmasi BPD' },
+                  ]}
+                  wrapperClassName="w-auto"
+                  className="py-1.5 px-3 rounded-xl bg-neutral-50 dark:bg-neutral-950 focus:border-primary-500"
+                />
               </div>
             </div>
 
@@ -576,7 +571,7 @@ export default function PajakPublicPage() {
                         key={t.id}
                         className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition"
                       >
-                        <td className="py-3 px-3 font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                        <td className="py-3 px-3 font-mono font-bold text-primary-700 dark:text-primary-400">
                           {t.nomorBukti}
                         </td>
                         <td className="py-3 px-3">
@@ -609,7 +604,7 @@ export default function PajakPublicPage() {
                         <td className="py-3 px-3 text-right">
                           <Link
                             href={`/informasi/pajak/bukti/${encodeURIComponent(t.nomorBukti)}`}
-                            className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-xl border border-emerald-200 dark:border-emerald-800"
+                            className="inline-flex items-center gap-1 text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline bg-primary-50 dark:bg-primary-950/60 px-2.5 py-1 rounded-xl border border-primary-200 dark:border-primary-800"
                           >
                             Resi <ChevronRight className="w-3.5 h-3.5" />
                           </Link>

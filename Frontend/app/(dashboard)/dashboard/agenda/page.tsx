@@ -9,13 +9,22 @@ import {
 } from '@/lib/services/statistik.service';
 import type { AgendaKegiatan } from '@/types/statistik';
 import { Card } from '@/components/ui/Card';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatTanggal } from '@/lib/utils/format';
+
+/** Konversi nilai datetime-local ("YYYY-MM-DDTHH:mm") ke RFC3339 ("YYYY-MM-DDTHH:mm:ssZ"). */
+function toRFC3339(value: string): string {
+  if (!value) return value;
+  // datetime-local sudah dalam format ISO, tinggal tambahkan detik & timezone UTC
+  return value.length === 16 ? `${value}:00Z` : value;
+}
 import { CalendarDays, Plus, Edit, Trash2, Save, MapPin, User } from 'lucide-react';
 import { useToastStore } from '@/store/toastStore';
 
@@ -60,7 +69,6 @@ export default function DashboardAgendaPage() {
 
   useEffect(() => {
     void refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openAdd = () => {
@@ -98,8 +106,8 @@ export default function DashboardAgendaPage() {
       const payload = {
         judul: form.judul,
         deskripsi: form.deskripsi,
-        tanggalMulai: form.tanggalMulai,
-        tanggalSelesai: form.tanggalSelesai || undefined,
+        tanggalMulai: toRFC3339(form.tanggalMulai),
+        tanggalSelesai: form.tanggalSelesai ? toRFC3339(form.tanggalSelesai) : undefined,
         lokasi: form.lokasi,
         penyelenggara: form.penyelenggara,
         kategori: form.kategori as AgendaKegiatan['kategori'],
@@ -120,14 +128,23 @@ export default function DashboardAgendaPage() {
     }
   };
 
-  const handleDelete = async (item: AgendaKegiatan) => {
-    if (!window.confirm(`Hapus agenda "${item.judul}"?`)) return;
+  const [deleteTarget, setDeleteTarget] = useState<AgendaKegiatan | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = (item: AgendaKegiatan) => setDeleteTarget(item);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await deleteAgendaAdmin(item.id);
+      await deleteAgendaAdmin(deleteTarget.id);
       showSuccess('Agenda berhasil dihapus.');
       await refresh();
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Gagal menghapus agenda.');
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -146,7 +163,10 @@ export default function DashboardAgendaPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-neutral-500">Memuat agenda...</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Skeleton className="h-40 w-full rounded-2xl" />
+          <Skeleton className="h-40 w-full rounded-2xl" />
+        </div>
       ) : list.length === 0 ? (
         <Card className="p-10 text-center text-sm text-neutral-500">Belum ada agenda kegiatan.</Card>
       ) : (
@@ -199,6 +219,15 @@ export default function DashboardAgendaPage() {
           </Button>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Hapus Agenda"
+        message={<>Yakin ingin menghapus agenda <strong>&quot;{deleteTarget?.judul}&quot;</strong>? Tindakan ini tidak dapat dibatalkan.</>}
+        isLoading={deleting}
+        onConfirm={() => void handleConfirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

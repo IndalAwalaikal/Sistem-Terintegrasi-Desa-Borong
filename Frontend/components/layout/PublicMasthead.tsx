@@ -13,7 +13,7 @@ interface PublicMastheadProps {
 export function PublicMasthead({ eyebrow, title, description, image, meta = 'Desa Borong · Herlang · Bulukumba' }: PublicMastheadProps) {
   return (
     <section className="public-masthead relative overflow-hidden rounded-[2rem] border border-white/15 bg-[#071f46] text-white shadow-[0_24px_60px_rgba(7,35,82,0.20)]">
-      {image && <Image src={image} alt="" fill sizes="100vw" className="object-cover opacity-35" />}
+      {image && <Image src={image} alt="" fill sizes="100vw" priority className="object-cover opacity-35" />}
       <div className="absolute inset-0 bg-[linear-gradient(105deg,rgba(4,22,53,.96)_8%,rgba(7,49,110,.86)_57%,rgba(6,31,70,.38)_100%)]" />
       <div className="absolute -right-20 -top-24 h-80 w-80 rounded-full border border-white/15" />
       <div className="absolute -right-8 -top-8 h-52 w-52 rounded-full border border-white/10" />

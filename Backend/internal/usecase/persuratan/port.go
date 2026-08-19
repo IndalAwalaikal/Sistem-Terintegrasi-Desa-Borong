@@ -66,3 +66,19 @@ type EmailSender interface {
 	Send(ctx context.Context, to, subject, htmlBody string) error
 }
 
+// WhatsAppSender delivers outbound WhatsApp messages (FlowKirim or noop).
+type WhatsAppSender interface {
+	Send(ctx context.Context, to, text string) error
+}
+
+// NotifikasiRepository manages system notifications.
+type NotifikasiRepository interface {
+	Create(ctx context.Context, n domain.Notifikasi) error
+}
+
+// PerangkatReader resolves village apparatus data (used to fetch the current
+// kepala desa signature block without coupling the persuratan use case to the
+// desa infrastructure package).
+type PerangkatReader interface {
+	List(ctx context.Context) ([]domain.PerangkatDesa, error)
+}

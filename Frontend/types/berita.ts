@@ -8,10 +8,20 @@ export interface Berita {
   konten: string;
   kategori: KategoriBerita;
   gambarSampul: string;
+  gambarTengah?: string;
   penulis: string;
   tanggalTerbit: string;
   tags: string[];
   dibaca: number;
+}
+
+export interface BeritaKomentar {
+  id: string;
+  beritaId: string;
+  userId?: string | null;
+  nama: string;
+  konten: string;
+  createdAt: string;
 }
 
 export interface BeritaListParams {

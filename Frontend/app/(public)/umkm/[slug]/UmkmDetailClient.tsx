@@ -7,6 +7,7 @@ import type { Umkm } from '@/types/umkm';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { ShareButtons } from '@/components/features/ShareButtons';
 import { Phone, MapPin, Clock, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
@@ -139,6 +140,9 @@ export const UmkmDetailClient: React.FC<UmkmDetailClientProps> = ({ umkm }) => {
             </div>
           </div>
         </Card>
+
+        {/* Bagikan ke media sosial */}
+        <ShareButtons title={umkm.namaUsaha} />
       </div>
     </div>
   );

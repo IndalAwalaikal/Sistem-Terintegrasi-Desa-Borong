@@ -12,18 +12,22 @@ export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElemen
   error?: string;
   helperText?: string;
   placeholder?: string;
+  /** Kelas tambahan untuk elemen pembungkus (mis. `w-auto` untuk pemakaian inline). */
+  wrapperClassName?: string;
+  /** Kelas tambahan untuk elemen label. */
+  labelClassName?: string;
 }
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, label, options, error, helperText, placeholder = 'Pilih salah satu...', id, ...props }, ref) => {
+  ({ className, wrapperClassName, labelClassName, label, options, error, helperText, placeholder = 'Pilih salah satu...', id, ...props }, ref) => {
     const selectId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
     return (
-      <div className="w-full space-y-1.5">
+      <div className={cn('w-full space-y-1.5', wrapperClassName)}>
         {label && (
           <label
             htmlFor={selectId}
-            className="block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+            className={cn('block text-sm font-medium text-neutral-700 dark:text-neutral-300', labelClassName)}
           >
             {label}
             {props.required && <span className="text-danger ml-1">*</span>}

@@ -1,15 +1,21 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import type { Berita } from '@/types/berita';
+import type { Berita, BeritaKomentar } from '@/types/berita';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { Button } from '@/components/ui/Button';
 import { ShareButtons } from '@/components/features/ShareButtons';
+import {
+  getBeritaKomentar,
+  createBeritaKomentar,
+  deleteBeritaKomentar,
+} from '@/lib/services/berita.service';
+import { useAuthStore } from '@/store/authStore';
 import { formatTanggal, estimasiWaktuBaca } from '@/lib/utils/format';
-import { Calendar, User, Eye, ArrowLeft, Tag, Clock } from 'lucide-react';
+import { Calendar, User, Eye, ArrowLeft, Tag, Clock, MessageSquare, Send, Trash2 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
 function formatInlineText(text: string): React.ReactNode {
@@ -50,12 +56,14 @@ function formatInlineText(text: string): React.ReactNode {
   });
 }
 
-function renderMarkdownContent(content: string) {
+function renderMarkdownContent(content: string, gambarTengah?: string) {
   if (!content) return null;
 
   const lines = content.split(/\r?\n/);
   const elements: React.ReactNode[] = [];
   let currentParagraphLines: string[] = [];
+  let insertedTengah = false;
+  const middleIdx = Math.floor(lines.length / 2);
 
   const flushParagraph = (key: string | number) => {
     if (currentParagraphLines.length > 0) {
@@ -73,6 +81,18 @@ function renderMarkdownContent(content: string) {
 
   lines.forEach((line, idx) => {
     const trimmed = line.trim();
+
+    // Sisipkan gambar opsional di tengah artikel bila tersedia.
+    if (gambarTengah && !insertedTengah && idx === middleIdx) {
+      insertedTengah = true;
+      elements.push(
+        <figure key="gambar-tengah" className="my-8 rounded-2xl overflow-hidden shadow-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={gambarTengah} alt="Ilustrasi artikel" className="w-full h-auto object-contain" />
+          <figcaption className="text-center text-xs text-neutral-500 py-2 italic bg-neutral-50 dark:bg-neutral-900">Gambar Artikel</figcaption>
+        </figure>
+      );
+    }
 
     if (!trimmed) {
       flushParagraph(idx);
@@ -136,7 +156,7 @@ function renderMarkdownContent(content: string) {
       elements.push(
         <div key={`img-${idx}`} className="my-6 rounded-2xl overflow-hidden shadow-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={imgUrl} alt={altText || 'Gambar berita'} className="w-full h-auto max-h-[500px] object-cover" />
+          <img src={imgUrl} alt={altText || 'Gambar berita'} className="w-full h-auto object-contain" />
           {altText && <p className="text-center text-xs text-neutral-500 py-2 italic bg-neutral-50 dark:bg-neutral-900">{altText}</p>}
         </div>
       );
@@ -172,6 +192,42 @@ export const BeritaDetailClient: React.FC<BeritaDetailClientProps> = ({
   terkait,
 }) => {
   const { t } = useTranslation();
+
+  const { isAuthenticated, user } = useAuthStore();
+  const [komentar, setKomentar] = useState<BeritaKomentar[]>([]);
+  const [kontenKomentar, setKontenKomentar] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+
+  useEffect(() => {
+    getBeritaKomentar(berita.slug)
+      .then(setKomentar)
+      .catch(() => setKomentar([]));
+  }, [berita.slug]);
+
+  const handleSubmitKomentar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!kontenKomentar.trim() || !isAuthenticated) return;
+    setSubmitting(true);
+    try {
+      const created = await createBeritaKomentar(berita.slug, kontenKomentar);
+      setKomentar((prev) => [...prev, created]);
+      setKontenKomentar('');
+    } catch {
+      // abaikan — gagal kirim komentar
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteKomentar = async (id: string) => {
+    try {
+      await deleteBeritaKomentar(berita.slug, id);
+      setKomentar((prev) => prev.filter((k) => k.id !== id));
+    } catch {
+      // abaikan
+    }
+  };
 
   return (
     <div className="py-12 bg-neutral-50 dark:bg-neutral-950">
@@ -224,15 +280,13 @@ export const BeritaDetailClient: React.FC<BeritaDetailClientProps> = ({
           </div>
         </div>
 
-        {/* Cover Image */}
-        <div className="relative h-72 sm:h-96 w-full rounded-3xl overflow-hidden shadow-xl bg-neutral-100 dark:bg-neutral-900">
-          <Image
+        {/* Cover Image — full, tanpa crop, tanpa blur */}
+        <div className="w-full rounded-3xl overflow-hidden shadow-lg bg-neutral-100 dark:bg-neutral-900">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={berita.gambarSampul || 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80'}
             alt={berita.judul}
-            fill
-            unoptimized
-            sizes="(max-width: 1024px) 100vw, 896px"
-            className="object-cover"
+            className="w-full h-auto max-h-[70vh] object-contain"
           />
         </div>
 
@@ -245,7 +299,7 @@ export const BeritaDetailClient: React.FC<BeritaDetailClientProps> = ({
           )}
 
           <div className="prose dark:prose-invert max-w-none">
-            {renderMarkdownContent(berita.konten)}
+            {renderMarkdownContent(berita.konten, berita.gambarTengah)}
           </div>
 
           {/* Tags */}
@@ -264,6 +318,75 @@ export const BeritaDetailClient: React.FC<BeritaDetailClientProps> = ({
 
         {/* Share */}
         <ShareButtons title={berita.judul} />
+
+        {/* Komentar */}
+        <section className="space-y-5 pt-4" aria-label="Komentar">
+          <h3 className="text-xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-primary-500" /> Komentar ({komentar.length})
+          </h3>
+
+          {isAuthenticated ? (
+            <form onSubmit={handleSubmitKomentar} className="space-y-3">
+              <textarea
+                value={kontenKomentar}
+                onChange={(e) => setKontenKomentar(e.target.value)}
+                rows={3}
+                maxLength={1000}
+                required
+                placeholder="Tulis komentar Anda di sini..."
+                className="w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3 text-sm text-neutral-800 dark:text-neutral-200 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500"
+              />
+              <div className="flex justify-end">
+                <Button type="submit" variant="primary" size="md" isLoading={submitting}>
+                  <Send className="w-4 h-4" /> Kirim Komentar
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <p className="text-xs text-neutral-500 bg-neutral-100 dark:bg-neutral-900 rounded-xl px-4 py-3">
+              <Link href="/login" className="text-primary-600 dark:text-primary-400 font-bold hover:underline">
+                Masuk
+              </Link>{' '}
+              untuk ikut berkomentar.
+            </p>
+          )}
+
+          <div className="space-y-3">
+            {komentar.length === 0 ? (
+              <p className="text-xs text-neutral-400">Belum ada komentar. Jadilah yang pertama berkomentar.</p>
+            ) : (
+              komentar.map((k) => (
+                <div
+                  key={k.id}
+                  className="flex items-start gap-3 rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 bg-white dark:bg-neutral-900"
+                >
+                  <div className="w-9 h-9 rounded-full bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 grid place-items-center font-bold text-xs shrink-0">
+                    {(k.nama || 'W').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-sm text-neutral-900 dark:text-white">{k.nama}</span>
+                      <span className="text-[11px] text-neutral-400">
+                        {formatTanggal(k.createdAt, { withTime: true })}
+                      </span>
+                      {(isAdmin || k.userId === user?.id) && (
+                        <button
+                          onClick={() => void handleDeleteKomentar(k.id)}
+                          className="ml-auto text-rose-500 hover:text-rose-700 transition-colors"
+                          title="Hapus komentar"
+                          aria-label="Hapus komentar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-sm text-neutral-700 dark:text-neutral-300 mt-1 break-words">{k.konten}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
 
         {/* Related Articles */}
         {terkait.length > 0 && (

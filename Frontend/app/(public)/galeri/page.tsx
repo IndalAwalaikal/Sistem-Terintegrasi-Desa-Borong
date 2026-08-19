@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { formatTanggal } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
-import { Image as ImageIcon, Calendar, ChevronLeft, ChevronRight, X, Camera } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, X, Camera } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
 function GaleriPage() {
@@ -182,6 +182,7 @@ function GaleriPage() {
               </button>
 
               <figure className="max-h-full flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- lightbox foto URL eksternal */}
                 <img
                   src={foto.url}
                   alt={foto.caption || lightbox.album.judul}

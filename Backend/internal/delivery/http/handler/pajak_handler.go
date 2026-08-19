@@ -91,12 +91,7 @@ func (h *Handler) PajakWajibList(w http.ResponseWriter, r *http.Request) {
 		httpapi.Error(w, err)
 		return
 	}
-	httpapi.JSON(w, 200, map[string]any{
-		"data":  items,
-		"total": total,
-		"page":  p,
-		"limit": l,
-	})
+	httpapi.List(w, items, p, l, total)
 }
 
 func (h *Handler) PajakWajibGet(w http.ResponseWriter, r *http.Request) {
@@ -188,12 +183,7 @@ func (h *Handler) PajakTransaksiPublicList(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	httpapi.JSON(w, 200, map[string]any{
-		"data":  sanitized,
-		"total": total,
-		"page":  p,
-		"limit": l,
-	})
+	httpapi.List(w, sanitized, p, l, total)
 }
 
 func (h *Handler) PajakTransaksiAdminList(w http.ResponseWriter, r *http.Request) {
@@ -203,6 +193,8 @@ func (h *Handler) PajakTransaksiAdminList(w http.ResponseWriter, r *http.Request
 	status := r.URL.Query().Get("status")
 	search := r.URL.Query().Get("search")
 	includeBatal := r.URL.Query().Get("includeBatal") == "true"
+	sortBy := r.URL.Query().Get("sortBy")
+	sortOrder := r.URL.Query().Get("sortOrder")
 
 	items, total, err := h.app.Pajak.ListTransaksi(r.Context(), pajak.TransaksiFilter{
 		Tahun:        tahun,
@@ -212,17 +204,14 @@ func (h *Handler) PajakTransaksiAdminList(w http.ResponseWriter, r *http.Request
 		Page:         p,
 		Limit:        l,
 		IncludeBatal: includeBatal,
+		SortBy:       sortBy,
+		SortOrder:    sortOrder,
 	})
 	if err != nil {
 		httpapi.Error(w, err)
 		return
 	}
-	httpapi.JSON(w, 200, map[string]any{
-		"data":  items,
-		"total": total,
-		"page":  p,
-		"limit": l,
-	})
+	httpapi.List(w, items, p, l, total)
 }
 
 func (h *Handler) PajakTransaksiGetNomor(w http.ResponseWriter, r *http.Request) {
@@ -267,12 +256,7 @@ func (h *Handler) PajakTransaksiSaya(w http.ResponseWriter, r *http.Request) {
 		httpapi.Error(w, err)
 		return
 	}
-	httpapi.JSON(w, 200, map[string]any{
-		"data":  items,
-		"total": total,
-		"page":  p,
-		"limit": l,
-	})
+	httpapi.List(w, items, p, l, total)
 }
 
 func (h *Handler) PajakTransaksiCreate(w http.ResponseWriter, r *http.Request) {

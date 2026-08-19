@@ -1,390 +1,301 @@
 # Backend Desa Borong
 
-Backend Desa Borong adalah layanan API REST yang digunakan oleh frontend website desa untuk mengelola konten, data operasional desa, layanan warga, autentikasi, dan transparansi keuangan. Aplikasi ini dibangun dengan Go dan menggunakan MySQL sebagai database utama.
+<p align="center">
+  <img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" />
+  <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white" alt="JWT" />
+  <img src="https://img.shields.io/badge/Clean_Architecture-4A90E2?style=for-the-badge" alt="Clean Architecture" />
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT" />
+  <img src="https://img.shields.io/badge/Author-Indal_Awalaikal-blue.svg?style=for-the-badge" alt="Author" />
+</p>
 
-Dokumen ini menjelaskan tujuan proyek, arsitektur, struktur folder, setup local, konfigurasi environment, alur kerja, modul utama, dan panduan operasional untuk pengembangan backend.
+Backend Desa Borong adalah layanan **REST API** yang digunakan frontend website desa untuk mengelola konten, data operasional desa, layanan warga, autentikasi, notifikasi, dan transparansi keuangan/pajak. Aplikasi ini dibangun dengan **Go 1.26** dan menggunakan **MySQL 8.4** sebagai database utama, mengikuti **Clean/Hexagonal Architecture** dengan lapisan yang jelas dan dependency inversion.
 
-## 1. Tujuan Backend
+> **Desa Borong, Kecamatan Herlang, Kabupaten Bulukumba, Sulawesi Selatan.** MIT License (c) 2026 Indal Awalaikal.
 
-Backend ini bertanggung jawab untuk:
+## Daftar Isi
 
-- menyediakan API untuk frontend dan client internal
-- menangani autentikasi dan otorisasi pengguna
-- menangani CRUD data desa seperti berita, agenda, UMKM, galeri, fasilitas, penduduk, dan profil
-- mengelola proses layanan surat dan pengajuan warga
-- menangani modul pengaduan dan penanganan laporan masyarakat
-- mendukung transparansi pajak desa dan audit trail
-- menyimpan file upload dan data transaksi yang relevan
+1. [Tujuan Backend](#tujuan-backend)
+2. [Teknologi yang Digunakan](#teknologi-yang-digunakan)
+3. [Arsitektur Backend](#arsitektur-backend)
+4. [Struktur Folder](#struktur-folder)
+5. [Modul dan Endpoint](#modul-dan-endpoint)
+6. [Konfigurasi Environment](#konfigurasi-environment)
+7. [Menjalankan Backend](#menjalankan-backend)
+8. [Pengelolaan Database](#pengelolaan-database)
+9. [Pencatatan & Background Jobs](#pencatatan--background-jobs)
+10. [Testing](#testing)
+11. [CI / CD](#ci--cd)
+12. [Security Considerations](#security-considerations)
+13. [Deployment dan Operasional](#deployment-dan-operasional)
+14. [Troubleshooting](#troubleshooting)
+15. [Dokumen Pendukung](#dokumen-pendukung)
 
-## 2. Teknologi yang Digunakan
+## Tujuan Backend
 
-- Bahasa: Go 1.26
-- Framework HTTP: net/http standard library
-- Database: MySQL 8.4
-- ORM/query layer: SQL dan repository pattern (terstruktur, tanpa ORM berat)
-- Autentikasi: JWT access token dan refresh token
-- Password hashing: bcrypt
-- Migrasi database: golang-migrate
-- File storage: path-based local storage untuk kebutuhan lokal/dev
-- Container: Docker dan Docker Compose
+Backend bertanggung jawab untuk:
 
-## 3. Arsitektur Backend
+- Menyediakan API REST untuk frontend dan client internal.
+- Menangani **autentikasi & otorisasi** (JWT access/refresh token, RBAC per role).
+- CRUD data desa: berita, agenda, UMKM, galeri, fasilitas, penduduk, potensi, profil.
+- Mengelola **layanan surat** (persuratan): jenis surat, pengajuan, pencatatan, lampiran, pencetakan PDF.
+- Mengelola **pengaduan** warga dan penanganan laporan.
+- Mendukung **transparansi pajak** desa & **APBDes** + audit trail.
+- Menyimpan file upload pada storage terpisah.
+- Mendorong **notifikasi realtime** (SSE) & kirim email/WhatsApp async via job worker.
 
-Backend mengikuti pola clean architecture dengan pemisahan lapisan yang jelas:
+## Teknologi yang Digunakan
 
-- domain: model domain, enum, validasi domain, error domain
-- usecase: logika bisnis, service, kontrak repository
-- delivery/http: routing, middleware, handler, response formatting
-- infrastructure: database repository, auth service, storage, konfigurasi
+| Layer | Pilihan | Catatan |
+|---|---|---|
+| Bahasa | **Go 1.26** | Green Tea GC, goroutine leak detector |
+| HTTP | **net/http stdlib** (enhanced `ServeMux`, route `{id}`) | Tanpa framework berat — selaras clean architecture |
+| Database | **MySQL 8.4 LTS** | Jalur LTS (stabil hingga 2032) |
+| Driver DB | `go-sql-driver/mysql` v1.8.1 | |
+| Query layer | **sqlc** (generate Go type-safe dari SQL mentah) | Repository = adapter tipis, bukan ORM |
+| Migrasi | **golang-migrate** | Version-controlled, via `docker compose run --rm migrate` atau startup |
+| Auth | **JWT access (15m) + refresh (30h di-hash, rotasi, dapat dicabut)** | `golang-jwt/jwt/v5` |
+| Hash password | `golang.org/x/crypto/bcrypt` (cost 12) | |
+| Logging | `log/slog` (structured, JSON) | Standard library |
+| Queue | Job worker internal (email, WhatsApp, PDF, cleanup) | |
+| Testing | `testing` + `testify` + `httptest` | `go test -race ./...` |
+| Container | Docker + docker-compose | service: `backend`, `mysql`, `migrate`, `frontend` |
+| File storage | Local path storage (dev) | `FILE_STORAGE_PATH` |
 
-Prinsip dasar:
+## Arsitektur Backend
 
-- domain tidak bergantung pada framework atau database
-- usecase tidak bergantung pada detail teknis HTTP
-- infrastruktur mengimplementasikan interface yang didefinisikan oleh usecase
-- wiring aplikasi dilakukan di entrypoint utama
+Pola **Clean/Hexagonal** — lapisan dalam tidak bergantung pada detail teknis; semua ketergantungan mengarah ke dalam (dependency inversion).
 
-Struktur folder utama:
-
-- cmd/api: entrypoint aplikasi
-- internal/domain: model dan konstanta domain
-- internal/usecase: modul business logic
-- internal/delivery/http: HTTP handler dan middleware
-- internal/infrastructure: implementasi database dan service eksternal
-- migrations: file migrasi SQL
-- pkg: helper utilitas umum
-
-## 4. Struktur Folder
-
-Berikut struktur utama backend:
-
-- cmd/
-  - api/main.go
-- internal/
-  - delivery/http/
-  - domain/
-  - infrastructure/
-  - pkg/
-  - usecase/
-- migrations/
-- pkg/
-- Dockerfile
-- go.mod
-- README.md
-- PRD.md
-- SPEC.md
-
-Berbagai modul yang tersedia mencakup:
-
-- auth
-- berita
-- desa
-- finance
-- galeri
-- pajak
-- pengaduan
-- persuratan
-- umkm
-- user
-
-## 5. Modul Utama
-
-### 5.1 Autentikasi dan User
-
-Modul ini menangani:
-
-- registrasi pengguna
-- login
-- logout
-- refresh token
-- otorisasi dan role
-- akun admin dan pengguna umum
-
-### 5.2 Desa dan Profil
-
-Modul ini mencakup:
-
-- data profil desa
-- sejarah, wilayah, struktur organisasi
-- data penduduk dan demografi
-- statistik desa
-
-### 5.3 Berita dan Konten Publik
-
-Modul ini menangani data seperti:
-
-- artikel berita
-- kategori konten
-- galeri foto
-- agenda kegiatan
-- fasilitas umum
-- potensi desa
-
-### 5.4 Layanan Warga dan Persuratan
-
-Modul ini memproses:
-
-- pengajuan layanan atau surat
-- status pengajuan
-- lampiran dokumen
-- alur persetujuan
-- riwayat perubahan status
-
-### 5.5 Pengaduan
-
-Modul ini menangani:
-
-- pembuatan pengaduan warga
-- kategori pengaduan
-- status dan timeline
-- respon admin atau petugas
-
-### 5.6 Pajak dan Transparansi Keuangan
-
-Modul pajak mencakup:
-
-- jenis pajak dan retribusi
-- data wajib pajak
-- transaksi pembayaran
-- verifikasi pembayaran
-- penyetoran batch ke BPD atau bank mitra
-- konfirmasi penerimaan
-- audit log
-- ringkasan pajak per tahun
-
-## 6. Persyaratan Pengembangan
-
-Sebelum menjalankan backend, pastikan lingkungan berikut tersedia:
-
-- Go 1.26 atau versi yang sesuai
-- MySQL 8.4
-- Docker dan Docker Compose jika ingin menjalankan semua service sekaligus
-- file environment .env yang sudah diisi
-
-## 7. Konfigurasi Environment
-
-Project root memiliki file .env.example yang berisi template environment. Jika ingin menjalankan backend secara lokal, pastikan variabel berikut tersedia:
-
-- APP_ENV
-- APP_PORT
-- DB_HOST
-- DB_PORT
-- DB_NAME
-- DB_USER
-- DB_PASSWORD
-- JWT_ACCESS_SECRET
-- JWT_ACCESS_TTL
-- JWT_REFRESH_TTL
-- CORS_ALLOWED_ORIGINS
-- FILE_STORAGE_PATH
-- LOG_LEVEL
-
-Untuk environment lokal dengan Docker, variabel root dapat diisi di file .env di root project. Untuk pengembangan backend langsung di local tanpa Docker, biasanya DB_HOST diisi localhost dan backend menjalankan koneksi langsung ke MySQL lokal.
-
-## 8. Menjalankan Backend
-
-### 8.1 Menjalankan seluruh sistem via Docker Compose
-
-Dari root project:
-
-```bash
-docker compose up --build -d
+```
+┌──────────────────────┐
+│   Delivery (HTTP)    │  routing, middleware, handler, response
+├──────────────────────┤
+│    Usecase           │  business logic, port (interface) repository
+├──────────────────────┤
+│   Domain             │  entity, enum, error sentinel, rules
+└──────────────────────┘
+         ▲          (adapters/implementasi di luar)
+         │          Infrastructure: mysql repo (sqlc), auth, storage, email, whatsapp, jobs, config
+         │
+         └── Wiring hanya di cmd/api/main.go
 ```
 
-Ini akan menjalankan:
+**Aturan penting:**
 
-- MySQL
-- migrasi database
-- backend API
-- frontend application
+- `domain` tidak boleh import `usecase`, `delivery`, atau `infrastructure`.
+- `usecase` hanya bergantung pada `domain` + interface yang ia definisikan (mis. `UserRepository`, `FileStorage`) — **tidak** import `net/http` atau `infrastructure`.
+- `delivery` & `infrastructure` boleh pakai `domain`/`usecase`, tapi tidak saling bergantung.
+- `cmd/api/main.go` adalah satu-satunya titik wiring.
 
-### 8.2 Menjalankan backend saja
+## Struktur Folder
 
-Dari folder Backend:
+```
+Backend/
+├── cmd/api/main.go                  # entrypoint: load config, wiring, start server
+├── internal/
+│   ├── delivery/http/               # router.go, middleware/, handler/, apiresponse/
+│   ├── domain/                      # entity & enum domain
+│   ├── infrastructure/              # mysql/ (repo + sqlc), auth, config, email, whatsapp, jobs, storage
+│   ├── usecase/                     # modul bisnis (lihat daftar modul)
+│   └── pkg/                         # util (apputil, notif)
+├── pkg/                             # pdfengine, security, templateengine
+├── migrations/                      # 23 pasang file up/down (golang-migrate)
+├── scripts/backup.sh                # backup database otomatis
+├── go.mod / go.sum
+├── sqlc.yaml                        # konfigurasi sqlc
+├── Dockerfile, .dockerignore
+├── .env.example                     # template env (Go lokal)
+└── AGENTS.md / PRD.md / SPEC.md
+```
+
+## Modul dan Endpoint
+
+Backend terdiri dari modul bisnis berikut:
+
+| Modul | Fokus |
+|---|---|
+| **auth** | login, logout, refresh token, register, verifikasi OTP/email, lupa & reset password, profil user |
+| **user** | admin/operator desa, role & RBAC |
+| **desa** | profil, sejarah, wilayah, struktur organisasi, statistik, potensi |
+| **berita** | daftar berita, kategori, pencarian (full-text), komentar |
+| **galeri** | album & foto galeri |
+| **fasilitas** | data fasilitas umum & peta |
+| **umkm** | direktori UMKM & pencarian |
+| **persuratan** | jenis surat (100+ jenis), pengajuan, pencatatan, lampiran, cek resi, verifikasi, cetak PDF |
+| **pengaduan** | kirim & lacak pengaduan warga, update status |
+| **finance** | APBDes, statistik keuangan, agenda (akbar/biasa) |
+| **pajak** | jenis pajak, wajib pajak, transaksi, penyetoran batch, konfirmasi, ringkasan |
+| **notifikasi** | notifikasi & SSE stream (`/api/notifikasi/stream`) |
+| **sekilas_info** | informasi/sekilas info desa |
+
+**Endpoint utama (ringkasan):**
+
+- **Auth** — `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/auth/me`, dsb.
+- **Berita** — `GET /api/berita`, `GET /api/berita/:slug`, `POST/PUT/DELETE` (admin).
+- **Profil & Desa** — `GET /api/profil`, `GET /api/statistik`, `GET /api/organisasi`, `GET /api/potensi`, dsb.
+- **Persuratan** — `GET /api/surat`, `POST /api/ajuan`, `GET /api/ajuan/:resi`, update status, upload lampiran.
+- **Pengaduan** — `GET /api/pengaduan`, `POST /api/pengaduan`, update status.
+- **Pajak** — `GET /api/pajak/jenis`, `GET /api/pajak/wajib`, `GET /api/pajak/transaksi`, setoran batch, konfirmasi, ringkasan.
+
+> Daftar endpoint lengkap ada di `internal/delivery/http/router.go` serta `SPEC.md`.
+
+## Konfigurasi Environment
+
+Salin `Backend/.env.example` ke `.env` dan sesuaikan (untuk dev lokal pakai `DB_HOST=localhost`):
+
+| Variabel | Deskripsi | Default/Contoh |
+|---|---|---|
+| `APP_ENV` | environment | `development` |
+| `APP_PORT` | port HTTP | `8080` |
+| `DB_HOST` | host MySQL | `localhost` (Go local) / `mysql` (Docker) |
+| `DB_PORT` | port MySQL | `3306` |
+| `DB_NAME` | nama database | `desa_digital` |
+| `DB_USER` | user MySQL | `desa_app` |
+| `DB_PASSWORD` | password MySQL | (kuat) |
+| `DB_ROOT_PASSWORD` | password root | (kuat) |
+| `JWT_ACCESS_SECRET` | secret JWT (≥32 byte) | `openssl rand -base64 32` |
+| `DOCUMENT_HMAC_SECRET` | HMAC untuk QR TTD digital (≥32 byte) | `openssl rand -base64 32` |
+| `JWT_ACCESS_TTL` | masa berlaku access token | `15m` |
+| `JWT_REFRESH_TTL` | masa berlaku refresh token | `720h` (30h) |
+| `BOOTSTRAP_SUPER_ADMIN_*` | seeding akun admin pertama (hapus setelah boot) | - |
+| `FILE_STORAGE_PATH` | folder upload lokal | `./uploads` |
+| `CORS_ALLOWED_ORIGINS` | origin yang diizinkan | `http://localhost:3000` |
+| `LOG_LEVEL` | level log | `info` |
+| `BREVO_API_KEY` / `BREVO_FROM_EMAIL` | email provider (opsional; NOOP di dev) | - |
+| `FLOWKIRIM_API_KEY` / `FLOWKIRIM_BASE_URL` | provider WhatsApp (opsional; NOOP di dev) | - |
+
+> **Docker:** gunakan template `.env` di root repository (`.env.example`) yang meng‑override `DB_HOST=mysql` dan `FILE_STORAGE_PATH=/app/uploads`.
+
+## Menjalankan Backend
+
+### Lewat Docker Compose (disertakan frontend + mysql + migrasi)
 
 ```bash
+cd /home/rex/projek/Desa Borong
+cp .env.example .env
+docker compose up --build -d backend
+# semua service: docker compose up --build -d
+```
+
+Backend tersedia di `http://localhost:8088` (container) atau `http://localhost:8080` (Go local).
+
+### Lokal (Go)
+
+```bash
+cd Backend
+cp .env.example .env          # sesuaikan, DB_HOST=localhost
 go mod tidy
+go mod download
 go run ./cmd/api
 ```
 
-Pada mode lokal, aplikasi biasanya memanfaatkan environment variable yang sudah diset pada terminal atau file .env.
+> Backend membutuhkan **MySQL aktif** + **migrasi sudah dijalankan**.
 
-### 8.3 Build backend ke binary
+## Pengelolaan Database
 
-```bash
-go build ./cmd/api
-```
-
-## 9. Database dan Migrasi
-
-Migrasi database berada di folder Backend/migrations. File migrasi bertanggung jawab atas pembuatan dan perubahan skema database agar struktur data tetap konsisten.
-
-Beberapa hal penting:
-
-- tiap perubahan skema dibuat dalam file migrasi versi
-- migrasi dijalankan sebelum service backend siap menerima request
-- migrasi harus menjaga kompatibilitas data lama
-- perubahan pada skema ini harus diperhatikan ketika memodifikasi domain atau repository
-
-Proyek ini juga menggunakan Docker service migrate untuk menjalankan migrasi otomatis saat container dibangun/dijalankan.
-
-## 10. API Behavior
-
-API backend mengikuti pola respons yang konsisten:
-
-- response sukses biasanya berbentuk data object atau list
-- response error mengikuti format standar dengan informasi error code dan message
-- endpoint didesign sesuai kebutuhan frontend
-- middleware menangani autentikasi, otorisasi, logging, recovery, dan validasi umum
-
-Contoh pola umum:
-
-```json
-{
-  "data": {
-    "id": "..."
-  }
-}
-```
-
-atau
-
-```json
-{
-  "error": {
-    "code": "validation_error",
-    "message": "Data tidak valid"
-  }
-}
-```
-
-## 11. Endpoint Utama
-
-Modul backend memiliki banyak endpoint, namun beberapa kategori utama adalah:
-
-- Auth
-  - login
-  - logout
-  - refresh token
-  - profile user
-- Berita
-  - list berita
-  - create dan update berita
-  - delete berita
-- Profil dan Desa
-  - profil desa
-  - data statistik
-  - struktur organisasi
-- Persuratan
-  - daftar surat
-  - membuat pengajuan
-  - update status
-  - upload lampiran
-- Pengaduan
-  - list pengaduan
-  - kirim pengaduan
-  - update status
-- Pajak
-  - daftar jenis pajak
-  - daftar wajib pajak
-  - daftar transaksi
-  - penyetoran batch
-  - konfirmasi setoran
-  - ringkasan pajak
-
-Detail endpoint yang lengkap dapat dilihat pada file SPEC.md serta handler route yang terdapat di folder internal/delivery/http.
-
-## 12. Testing
-
-Untuk menjaga kualitas backend, project menggunakan Go testing secara rutin. Pastikan pengujian dilakukan sebelum merge atau deployment.
-
-Perintah umum:
+Migrasi ada di `Backend/migrations` (23 pasang `up`/`down`, dikelola `golang-migrate`):
 
 ```bash
-go test ./...
+docker compose up -d mysql
+docker compose run --rm migrate            # up
+# reset dari nol:
+docker compose down -v
+docker compose up --build -d
 ```
 
-Untuk testing dengan race detection:
+Jika memakai `sqlc` untuk generate query type-safe:
 
 ```bash
-go test -race ./...
+sqlc generate    # baca Backend/sqlc.yaml -> Backend/internal/infrastructure/mysql/sqlc
 ```
 
-Kebijakan testing yang disarankan:
+## Pencatatan & Background Jobs
 
-- unit test untuk usecase
-- test handler API untuk happy path dan validation error
-- test repository jika diperlukan untuk query yang kompleks
-- test pada alur status untuk modul seperti persuratan dan pajak
+- Backend memakai `log/slog` terstruktur (JSON ke stdout).
+- **Job worker** memproses queue: email (Brevo), WhatsApp (FlowKirim), generasi PDF surat, dan pembersihan data kadaluarsa — sehingga request responsif.
+- Email & WhatsApp bersifat **asynchronous**: jika provider tidak dikonfigurasi, berada di mode **NOOP** dan pesan dicetak ke log (bisa di‑tes verifikasi/OTP di dev).
+- Notifikasi push ke browser lewat **SSE** di `/api/notifikasi/stream`.
 
-## 13. Security Considerations
+## Testing
 
-Backend ini memerlukan perhatian keamanan yang serius:
+Pakai standard library + testify (`Backend/go.mod`):
 
-- jangan hardcode secret atau password ke source code
-- selalu pakai environment variable untuk secret
-- gunakan JWT dengan TTL yang wajar
-- hindari mengembalikan data sensitif ke response publik
-- validasi semua input body, query, dan path parameter
-- gunakan transaksi database saat operasi multi-table penting
-- lakukan logging dan audit untuk perubahan status critical
+```bash
+go test ./...                 # semua unit + handler test
+go test -race ./...           # dengan race detector (wajib sebelum merge)
+go test -cover ./...          # cakupan kode (opsional)
+go vet ./...                  # lints/stastic analysis
+```
 
-## 14. Deployment dan Operasional
+Kebijakan testing:
 
-Untuk deployment production, beberapa hal yang perlu dipersiapkan:
+- Unit test untuk **usecase** (mock repository).
+- Test **handler API** untuk happy path + validasi error.
+- Test repository bila query kompleks.
+- Test alur status pada modul persuratan & pajak.
 
-- environment variable produksi
-- database yang aman dan terdeteksi backup
-- storage file yang permanen dan aman
-- CORS yang dibatasi
-- log management yang siap dipantau
-- monitoring endpoint penting seperti health atau readiness
+## CI / CD
 
-## 15. Troubleshooting Umum
+`.github/workflows/ci.yml` — job `backend`:
+
+- `setup-go@v5` (Go 1.26) → `go mod download` → `go vet ./...` → `go test ./...` → `go test -race ./...` (service MySQL 8.4 sebagai test database).
+
+## Security Considerations
+
+- Jangan pernah hardcode secret/password ke source code — pakai environment variable.
+- Password di-hash (bcrypt); JWT access token stateless; refresh token di‑hash di DB, berotasi tiap pakai, dapat dicabut; deteksi reuse sebagai indikator pencurian token.
+- Validasi semua input (body, query, path parameter).
+- Operasi multi‑tabel kritis dibungkus **transaksi** lewat interface `TxManager`.
+- Query SQL eksplisit lewat sqlc — hindari concatenation rentan SQL injection.
+- Gunakan transaksi DB saat mengubah lebih dari satu tabel.
+- Logging & audit trail untuk perubahan status kritis.
+- Jangan kembalikan data sensitif (password hash, token) di response.
+- `panic` hanya untuk bug fatal; ditangkap middleware `recover`.
+
+## Deployment dan Operasional
+
+Persiapan production:
+
+- Environment variable produksi (secret, DB, CORS, storage permanen & aman).
+- Backup DB otomatis via `Backend/scripts/backup.sh` (retensi 30 hari).
+
+  ```bash
+  cd Backend && bash scripts/backup.sh
+  ```
+
+- Storage file permanen (volume) terpisah dari source code.
+- CORS dibatasi pada domain produksi.
+- Health/readiness endpoint tersedia pada router (cek di `router.go`).
+- Log management siap dipantau (JSON structured logs → stdout).
+
+## Troubleshooting
 
 ### Backend tidak bisa start
-
-Periksa:
-
-- apakah Go sudah terinstall
-- apakah .env sudah benar
-- apakah MySQL aktif
-- apakah port backend sudah tidak dipakai
+- Pastikan Go 1.26 terpasang.
+- Periksa `.env` sudah benar.
+- Pastikan MySQL aktif & migrasi sudah berjalan.
+- Pastikan port (`APP_PORT`/8088) belum dipakai.
 
 ### Koneksi database gagal
+- Periksa `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`.
+- Pastikan container MySQL sudah *healthy*.
+- Pastikan migrasi sudah dijalankan (`docker compose run --rm migrate`).
 
-Periksa:
-
-- DB_HOST, DB_PORT, DB_USER, DB_PASSWORD
-- apakah container MySQL sudah ready
-- apakah migrasi database sudah berjalan
-
-### Error JWT atau login
-
-Periksa:
-
-- JWT_ACCESS_SECRET
-- format token
-- refresh token validity dan rotation
+### Error JWT / login
+- Periksa `JWT_ACCESS_SECRET` (≥32 byte, sama antara lokal & Docker).
+- Periksa format token & masa berlaku (15m).
+- Periksa refresh token validity & rotasi.
 
 ### Error file upload
+- Periksa `FILE_STORAGE_PATH` & permission folder upload.
+- Pada Docker, pastikan volume `uploads` tersedia.
 
-Periksa:
+## Dokumen Pendukung
 
-- FILE_STORAGE_PATH
-- permission folder upload
-- volume docker jika memakai Docker Compose
+- `AGENTS.md` — panduan kerja AI coding agent backend (clean arch, DoD, teknologi).
+- `PRD.md` / `SPEC.md` — kebutuhan produk & spesifikasi teknis backend.
 
-## 16. Dokumen Pendukung
+---
 
-Backend memiliki dokumen spesifikasi dan PRD yang menjelaskan kebutuhan produk dan desain teknis, yaitu:
-
-- PRD.md
-- SPEC.md
-- AGENTS.md
-
-Dokumen ini sangat penting untuk memahami prioritas fitur, kontrak API, serta peraturan bisnis yang perlu dipenuhi.
-
-## 17. Ringkasan
-
-Backend Desa Borong adalah API yang menjadi tulang punggung sistem informasi desa digital. Dengan kombinasi Go, MySQL, JWT, migrasi database, dan arsitektur modular, backend ini dirancang untuk mendukung kebutuhan operasional desa yang kompleks namun tetap terstruktur, aman, dan mudah dikembangkan.
+Backend Desa Borong adalah tulang punggung sistem informasi desa digital. Dengan Go, MySQL, JWT, migrasi database, job worker async, dan arsitektur modular, backend ini dirancang untuk mendukung kebutuhan operasional desa yang kompleks namun tetap **terstruktur, aman, dan mudah dikembangkan**.

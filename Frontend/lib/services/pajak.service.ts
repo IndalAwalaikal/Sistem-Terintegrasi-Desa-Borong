@@ -22,6 +22,24 @@ export interface DetailSetoranBatch {
   auditTrail: AuditLogPajak[];
 }
 
+export function asPaginated<T>(res: {
+  items: T[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}): PaginatedResult<T> {
+  return {
+    data: res.items,
+    total: res.meta.total,
+    page: res.meta.page,
+    limit: res.meta.limit,
+    totalPages: res.meta.totalPages,
+  };
+}
+
 export const pajakService = {
   // ---- Public Endpoints ----
 
@@ -33,8 +51,12 @@ export const pajakService = {
     return apiRequest<JenisPajak[]>('/pajak/jenis');
   },
 
-  getTransaksiPublic(filter: TransaksiPajakFilter): Promise<PaginatedResult<TransaksiPajak>> {
-    return apiRequest<PaginatedResult<TransaksiPajak>>(`/pajak/transaksi${query(filter as Record<string, string | number | undefined>)}`);
+  async getTransaksiPublic(filter: TransaksiPajakFilter): Promise<PaginatedResult<TransaksiPajak>> {
+    const res = await apiRequest<{
+      items: TransaksiPajak[];
+      meta: { page: number; limit: number; total: number; totalPages: number };
+    }>(`/pajak/transaksi${query(filter as Record<string, string | number | undefined>)}`);
+    return asPaginated(res);
   },
 
   getTransaksiByNomor(nomorBukti: string): Promise<DetailTransaksiBukti> {
@@ -49,10 +71,12 @@ export const pajakService = {
     return apiRequest<DetailSetoranBatch>(`/pajak/setoran/${id}`);
   },
 
-  getPajakSaya(page = 1, limit = 20): Promise<PaginatedResult<TransaksiPajak>> {
-    return apiRequest<PaginatedResult<TransaksiPajak>>(`/pajak/saya${query({ page, limit })}`, {
-      auth: true,
-    });
+  async getPajakSaya(page = 1, limit = 20): Promise<PaginatedResult<TransaksiPajak>> {
+    const res = await apiRequest<{
+      items: TransaksiPajak[];
+      meta: { page: number; limit: number; total: number; totalPages: number };
+    }>(`/pajak/saya${query({ page, limit })}`, { auth: true });
+    return asPaginated(res);
   },
 
   // ---- Admin Endpoints ----
@@ -78,10 +102,12 @@ export const pajakService = {
     });
   },
 
-  getWajibPajakAdmin(search?: string, page = 1, limit = 20): Promise<PaginatedResult<WajibPajak>> {
-    return apiRequest<PaginatedResult<WajibPajak>>(`/admin/pajak/wajib-pajak${query({ search, page, limit })}`, {
-      auth: true,
-    });
+  async getWajibPajakAdmin(search?: string, page = 1, limit = 20): Promise<PaginatedResult<WajibPajak>> {
+    const res = await apiRequest<{
+      items: WajibPajak[];
+      meta: { page: number; limit: number; total: number; totalPages: number };
+    }>(`/admin/pajak/wajib-pajak${query({ search, page, limit })}`, { auth: true });
+    return asPaginated(res);
   },
 
   getWajibPajakGet(id: string): Promise<WajibPajak> {
@@ -105,10 +131,12 @@ export const pajakService = {
     });
   },
 
-  getTransaksiAdmin(filter: TransaksiPajakFilter): Promise<PaginatedResult<TransaksiPajak>> {
-    return apiRequest<PaginatedResult<TransaksiPajak>>(`/admin/pajak/transaksi${query(filter as Record<string, string | number | undefined>)}`, {
-      auth: true,
-    });
+  async getTransaksiAdmin(filter: TransaksiPajakFilter): Promise<PaginatedResult<TransaksiPajak>> {
+    const res = await apiRequest<{
+      items: TransaksiPajak[];
+      meta: { page: number; limit: number; total: number; totalPages: number };
+    }>(`/admin/pajak/transaksi${query(filter as Record<string, string | number | undefined>)}`, { auth: true });
+    return asPaginated(res);
   },
 
   createTransaksi(input: {

@@ -60,6 +60,48 @@ func (r *StatistikRepo) Upsert(ctx context.Context, s domain.StatistikPenduduk) 
 	return err
 }
 
+// GetTrenBulanan returns the monthly birth/death/move series for a given year,
+// ordered by month. An empty slice is returned when no rows exist for the year.
+func (r *StatistikRepo) GetTrenBulanan(ctx context.Context, tahun int) ([]domain.StatistikBulanan, error) {
+	rows, err := q(ctx, r.db).QueryContext(ctx,
+		"SELECT bulan,lahir,meninggal,pindah_masuk,pindah_keluar FROM statistik_bulanan WHERE tahun=? ORDER BY bulan", tahun)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []domain.StatistikBulanan{}
+	for rows.Next() {
+		var b domain.StatistikBulanan
+		if err := rows.Scan(&b.Bulan, &b.Lahir, &b.Meninggal, &b.PindahMasuk, &b.PindahKeluar); err != nil {
+			return nil, err
+		}
+		out = append(out, b)
+	}
+	return out, rows.Err()
+}
+
+// UpsertTrenBulanan replaces every monthly row for the given year. It deletes
+// all existing rows for the year inside a single transaction, then inserts every
+// supplied row. Passing a partial/empty set clears the year.
+func (r *StatistikRepo) UpsertTrenBulanan(ctx context.Context, tahun int, rows []domain.StatistikBulanan) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.ExecContext(ctx, "DELETE FROM statistik_bulanan WHERE tahun=?", tahun); err != nil {
+		return err
+	}
+	for _, b := range rows {
+		if _, err := tx.ExecContext(ctx,
+			"INSERT INTO statistik_bulanan(tahun,bulan,lahir,meninggal,pindah_masuk,pindah_keluar) VALUES(?,?,?,?,?,?)",
+			tahun, b.Bulan, b.Lahir, b.Meninggal, b.PindahMasuk, b.PindahKeluar); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 // ---- APBDes ----
 
 type ApbdesRepo struct{ db *sql.DB }

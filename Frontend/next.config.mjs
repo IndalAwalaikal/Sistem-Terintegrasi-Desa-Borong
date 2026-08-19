@@ -1,13 +1,29 @@
 // next.config.mjs — Website Desa Borong
 // Rewrites semua request /api/* (dan /uploads/*) ke backend Go melalui internal Docker network.
 // Variabel NEXT_PUBLIC_* dan API_INTERNAL_URL disuplai lewat Docker BUILD ARG → ENV (lihat Frontend/Dockerfile).
+
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL || 'http://backend:8080';
 
 export default {
   reactStrictMode: true,
   output: 'standalone',
   images: {
-    unoptimized: true,
+    // Aktifkan optimasi Next.js (membutuhkan sharp — sudah ada di package.json).
+    // Gambar akan dikonversi ke WebP / AVIF dan di-resize sesuai layar pengguna.
+    qualities: [75, 85, 90],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 86400, // 24 jam
+    remotePatterns: [
+      // Unsplash — dipakai sebagai hero background HD
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      // Backend uploads yang diakses via rewrite /uploads/*
+      { protocol: 'http',  hostname: 'localhost' },
+      { protocol: 'http',  hostname: 'backend' },
+      // Wildcard untuk semua host pada deployment production
+      { protocol: 'https', hostname: '**' },
+    ],
   },
 
   env: {
@@ -23,3 +39,4 @@ export default {
     ];
   },
 };
+

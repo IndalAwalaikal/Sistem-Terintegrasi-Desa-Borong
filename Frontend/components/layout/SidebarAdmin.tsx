@@ -11,6 +11,7 @@ import {
   Building2,
   MessageSquare,
   Newspaper,
+  Megaphone,
   Image as ImageIcon,
   BarChart3,
   ShoppingBag,
@@ -24,6 +25,9 @@ import {
   LogOut,
   Home,
   X,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Bell,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useUiStore } from '@/store/uiStore';
@@ -44,7 +48,9 @@ export const SidebarAdmin: React.FC = () => {
     { href: '/dashboard/fasilitas', label: 'Fasilitas Publik Desa', icon: Building2 },
 
     { href: '/dashboard/pengaduan', label: 'Kelola Pengaduan', icon: MessageSquare },
+    { href: '/dashboard/notifikasi', label: 'Riwayat Notifikasi', icon: Bell },
     { href: '/dashboard/berita', label: 'Kelola Berita', icon: Newspaper },
+    { href: '/dashboard/sekilas-info', label: 'Sekilas Info', icon: Megaphone },
     { href: '/dashboard/galeri', label: 'Kelola Galeri', icon: ImageIcon },
     { href: '/dashboard/agenda', label: 'Agenda & Kalender', icon: CalendarDays },
     { href: '/dashboard/umkm', label: 'Direktori UMKM', icon: ShoppingBag },
@@ -81,42 +87,69 @@ export const SidebarAdmin: React.FC = () => {
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 flex h-full w-64 shrink-0 flex-col overflow-y-auto bg-neutral-900 text-neutral-300 border-r border-neutral-800 transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
-        }`}
+        className={`
+          fixed top-0 bottom-0 left-0 z-50 flex h-full shrink-0 flex-col overflow-y-auto on-dark bg-secondary-900 text-neutral-300 border-r border-white/10 transition-all duration-300 ease-in-out
+          lg:sticky lg:top-0 lg:h-screen lg:translate-x-0
+          ${sidebarOpen ? 'translate-x-0 w-64 shadow-2xl' : '-translate-x-full w-64 lg:w-20'}
+        `}
       >
-        <div className="flex-1 p-5 space-y-5">
+        <div className={`flex-1 p-5 space-y-5 ${!sidebarOpen ? 'lg:p-2' : ''}`}>
           {/* Header Admin */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-secondary-600 flex items-center justify-center text-white font-bold shadow-md shrink-0">
-                <ShieldAlert className="w-6 h-6" />
+          {sidebarOpen ? (
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-secondary-600 flex items-center justify-center text-white font-bold shadow-md shrink-0">
+                  <ShieldAlert className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="font-extrabold text-sm text-white tracking-tight">ADMIN DESA</h2>
+                  <p className="text-[10px] text-primary-400 font-bold">DESA BORONG DIGITAL</p>
+                </div>
               </div>
-              <div>
-                <h2 className="font-extrabold text-sm text-white tracking-tight">ADMIN DESA</h2>
-                <p className="text-[10px] text-primary-400 font-bold">DESA BORONG DIGITAL</p>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="hidden lg:flex text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-secondary-800"
+                  aria-label="Ciutkan Sidebar"
+                >
+                  <PanelLeftClose className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(false)}
+                  className="lg:hidden text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-secondary-800"
+                  aria-label="Tutup Sidebar"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden text-neutral-400 hover:text-white p-1 rounded-lg hover:bg-neutral-800"
-              aria-label="Tutup Sidebar"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          ) : (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="hidden lg:flex text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-secondary-800"
+                aria-label="Buka Sidebar"
+              >
+                <PanelLeftOpen className="w-5 h-5" />
+              </button>
+            </div>
+          )}
 
           {/* User Card */}
-          <div className="p-3 bg-neutral-800/60 rounded-xl border border-neutral-700/50 flex items-center gap-3">
+          <div className={`p-3 lg:p-2 bg-secondary-800/60 rounded-xl border border-white/10 flex items-center gap-3 ${!sidebarOpen ? 'lg:justify-center' : ''}`}>
             <div className="w-8 h-8 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
               {user?.nama?.charAt(0) || 'A'}
             </div>
-            <div className="overflow-hidden">
-              <p className="text-xs font-bold text-white truncate">{user?.nama || 'Admin Desa'}</p>
-              <p className="text-[10px] text-neutral-400 capitalize font-medium">{user?.role || 'Admin'}</p>
-            </div>
+            {sidebarOpen && (
+              <div className="overflow-hidden">
+                <p className="text-xs font-bold text-white truncate">{user?.nama || 'Admin Desa'}</p>
+                <p className="text-[10px] text-neutral-400 capitalize font-medium">{user?.role || 'Admin'}</p>
+              </div>
+            )}
           </div>
 
           {/* Navigation Menu */}
@@ -131,13 +164,16 @@ export const SidebarAdmin: React.FC = () => {
                   href={item.href}
                   onClick={handleNavClick}
                   className={`flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                    sidebarOpen ? 'justify-start' : 'lg:justify-center lg:px-2'
+                  } ${
                     isActive
                       ? 'bg-primary-600 text-white shadow-md shadow-primary-600/20'
-                      : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
+                      : 'text-neutral-300 hover:bg-secondary-800 hover:text-white'
                   }`}
+                  title={!sidebarOpen ? item.label : undefined}
                 >
                   <item.icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-neutral-400'}`} />
-                  <span className="truncate">{item.label}</span>
+                  {sidebarOpen && <span className="truncate">{item.label}</span>}
                 </Link>
               );
             })}
@@ -145,22 +181,28 @@ export const SidebarAdmin: React.FC = () => {
         </div>
 
         {/* Footer Logout & Web Public Button */}
-        <div className="mt-auto border-t border-neutral-800 bg-neutral-950/50 p-5 space-y-1.5">
+        <div className="mt-auto border-t border-white/10 bg-black/20 p-5 space-y-1.5 lg:p-2 lg:space-y-1">
           <Link
             href="/"
             onClick={handleNavClick}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-300 hover:text-white hover:bg-neutral-800 transition-colors"
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-300 hover:text-white hover:bg-secondary-800 transition-colors ${
+              sidebarOpen ? 'justify-start' : 'lg:justify-center lg:px-2'
+            }`}
+            title={!sidebarOpen ? 'Lihat Halaman Publik' : undefined}
           >
             <Home className="w-4 h-4 text-primary-500 shrink-0" />
-            <span>Lihat Halaman Publik</span>
+            {sidebarOpen && <span>Lihat Halaman Publik</span>}
           </Link>
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-950/40 transition-colors"
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-950/40 transition-colors w-full ${
+              sidebarOpen ? 'justify-start' : 'lg:justify-center lg:px-2'
+            }`}
+            title={!sidebarOpen ? 'Keluar Sesi Admin' : undefined}
           >
             <LogOut className="w-4 h-4 shrink-0" />
-            <span>Keluar Sesi Admin</span>
+            {sidebarOpen && <span>Keluar Sesi Admin</span>}
           </button>
         </div>
       </aside>

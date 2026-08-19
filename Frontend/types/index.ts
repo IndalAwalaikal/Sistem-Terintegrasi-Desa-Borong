@@ -1,10 +1,14 @@
 export type { ProfilDesa, PerangkatDesa, Dusun, PotensiDesa } from './desa';
-export type { Berita, KategoriBerita, BeritaListParams, PaginatedResult } from './berita';
+export type { Berita, KategoriBerita, BeritaListParams, PaginatedResult, BeritaKomentar } from './berita';
 export type {
   StatusPengajuan,
+  WorkflowStepConfig,
+  ApprovalStep,
+  Penduduk,
   JenisSurat,
   FormFieldConfig,
   PengajuanSurat,
+  DokumenHasilSurat,
   RiwayatStatus,
   LampiranFile,
   SubmitPengajuanInput,

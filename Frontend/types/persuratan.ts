@@ -77,7 +77,7 @@ export interface PengajuanSurat {
   pemohonNama: string;
   subjekNik?: string;
   data: Record<string, string>;
-  dataSnapshot?: Record<string, any>;
+  dataSnapshot?: Record<string, string>;
   lampiran: LampiranFile[];
   status: StatusPengajuan;
   currentStep?: number;
@@ -89,6 +89,10 @@ export interface PengajuanSurat {
   approvalSteps?: ApprovalStep[];
   dibuatPada: string;
   diperbaruiPada: string;
+  penandatangan?: {
+    nama: string;
+    nip?: string;
+  };
 }
 
 export interface DokumenHasilSurat {

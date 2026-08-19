@@ -103,9 +103,13 @@ func (r *GaleriRepo) save(ctx context.Context, album domain.GaleriAlbum) error {
 		return err
 	}
 	for _, f := range album.Fotos {
+		fTanggal := f.Tanggal
+		if fTanggal == "" {
+			fTanggal = album.Tanggal
+		}
 		if _, err := tx.ExecContext(ctx,
 			"INSERT INTO galeri_item(id,album_id,url,caption,tanggal) VALUES(?,?,?,?,?)",
-			f.ID, album.ID, f.URL, f.Caption, f.Tanggal); err != nil {
+			f.ID, album.ID, f.URL, f.Caption, fTanggal); err != nil {
 			return err
 		}
 	}

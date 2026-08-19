@@ -119,9 +119,13 @@ type RefreshTokenRepo struct{ db *sql.DB }
 func NewRefreshTokenRepo(db *sql.DB) *RefreshTokenRepo { return &RefreshTokenRepo{db: db} }
 
 func (r *RefreshTokenRepo) Create(ctx context.Context, t domain.RefreshToken) error {
+	lastUsed := t.LastUsedAt
+	if lastUsed.IsZero() {
+		lastUsed = time.Now()
+	}
 	_, err := q(ctx, r.db).ExecContext(ctx,
-		"INSERT INTO refresh_tokens(id,user_id,token_hash,expires_at) VALUES(?,?,?,?)",
-		t.ID, t.UserID, t.TokenHash, t.ExpiresAt)
+		"INSERT INTO refresh_tokens(id,user_id,token_hash,expires_at,last_used_at) VALUES(?,?,?,?,?)",
+		t.ID, t.UserID, t.TokenHash, t.ExpiresAt, lastUsed)
 	return err
 }
 
@@ -130,8 +134,8 @@ func (r *RefreshTokenRepo) GetByHashForUpdate(ctx context.Context, hash string) 
 	var revoked sql.NullTime
 	var replaced sql.NullString
 	err := q(ctx, r.db).QueryRowContext(ctx,
-		"SELECT id,user_id,token_hash,expires_at,revoked_at,replaced_by FROM refresh_tokens WHERE token_hash=? FOR UPDATE", hash).
-		Scan(&t.ID, &t.UserID, &t.TokenHash, &t.ExpiresAt, &revoked, &replaced)
+		"SELECT id,user_id,token_hash,expires_at,revoked_at,replaced_by,last_used_at FROM refresh_tokens WHERE token_hash=? FOR UPDATE", hash).
+		Scan(&t.ID, &t.UserID, &t.TokenHash, &t.ExpiresAt, &revoked, &replaced, &t.LastUsedAt)
 	if revoked.Valid {
 		t.RevokedAt = &revoked.Time
 	}
@@ -142,8 +146,9 @@ func (r *RefreshTokenRepo) GetByHashForUpdate(ctx context.Context, hash string) 
 }
 
 func (r *RefreshTokenRepo) Rotate(ctx context.Context, oldID, newID string) error {
+	// Update last_used_at on the old token before revoking so activity history is accurate.
 	_, err := q(ctx, r.db).ExecContext(ctx,
-		"UPDATE refresh_tokens SET revoked_at=NOW(),replaced_by=? WHERE id=?", newID, oldID)
+		"UPDATE refresh_tokens SET revoked_at=NOW(),replaced_by=?,last_used_at=NOW() WHERE id=?", newID, oldID)
 	return err
 }
 

@@ -1,15 +1,23 @@
 import { MetadataRoute } from 'next';
-import { mockBerita } from '@/lib/mock/berita.mock';
+import { getBeritaList } from '@/lib/services/berita.service';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://desaborong.bulukumbakab.go.id';
 
-  const newsUrls = mockBerita.map((item) => ({
-    url: `${baseUrl}/berita/${item.slug}`,
-    lastModified: new Date(item.tanggalTerbit),
-    changeFrequency: 'weekly' as const,
-    priority: 0.7,
-  }));
+  // Fetch berita real dari API; fallback kosong jika API tidak tersedia
+  // agar sitemap tetap valid meski backend sedang down.
+  let newsUrls: MetadataRoute.Sitemap = [];
+  try {
+    const result = await getBeritaList({ page: 1, perPage: 100 });
+    newsUrls = result.data.map((item) => ({
+      url: `${baseUrl}/berita/${item.slug}`,
+      lastModified: new Date(item.tanggalTerbit),
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    }));
+  } catch {
+    // Fallback: sitemap tetap valid tanpa URL berita
+  }
 
   const routes = [
     '',

@@ -55,8 +55,9 @@ func Common(origins []string, env string, log *slog.Logger) func(http.Handler) h
 			if o := r.Header.Get("Origin"); o != "" && allowed[o] {
 				w.Header().Set("Access-Control-Allow-Origin", o)
 				w.Header().Set("Vary", "Origin")
-				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-ID")
+				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-ID, X-CSRF-Token")
 				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
 			}
 			if r.Method == http.MethodOptions {
 				w.WriteHeader(204)

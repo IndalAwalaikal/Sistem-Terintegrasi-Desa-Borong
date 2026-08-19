@@ -2,16 +2,23 @@ package berita
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
 	"desa-borong-api/internal/domain"
 	"desa-borong-api/internal/pkg/apputil"
+	"desa-borong-api/internal/usecase/notifikasi"
 )
 
-type Service struct{ repo Repository }
+type Service struct {
+	repo  Repository
+	notif *notifikasi.Service
+}
 
-func NewService(repo Repository) *Service { return &Service{repo: repo} }
+func NewService(repo Repository, notif *notifikasi.Service) *Service {
+	return &Service{repo: repo, notif: notif}
+}
 
 // List returns a paginated berita list. For public calls only published items
 // are returned unless IncludeDraft is set.
@@ -25,7 +32,11 @@ func (s *Service) List(ctx context.Context, f ListFilter) (items []domain.Berita
 	if f.Limit > 100 {
 		f.Limit = 100
 	}
-	items, total, _ = s.repo.List(ctx, f)
+	var listErr error
+	items, total, listErr = s.repo.List(ctx, f)
+	if listErr != nil {
+		fmt.Printf("[berita.Service.List] repo error: %v\n", listErr)
+	}
 	return items, total
 }
 
@@ -70,8 +81,14 @@ func (s *Service) Create(ctx context.Context, b domain.Berita, authorID *string)
 	}
 	b.CreatedAt = time.Now()
 	b.UpdatedAt = time.Now()
-	if err := s.repo.Create(ctx, b); err != nil {
+		if err := s.repo.Create(ctx, b); err != nil {
 		return b, err
+	}
+	// Broadcast notification to all admins when a new berita is published.
+	if b.Status == domain.BeritaTerbit && s.notif != nil {
+		_ = s.notif.BroadcastToAdmins(ctx, "Berita Baru",
+			fmt.Sprintf("Berita \"%s\" telah dipublikasi.", b.Judul),
+			"/berita/"+b.Slug)
 	}
 	return b, nil
 }
@@ -97,6 +114,9 @@ func (s *Service) Update(ctx context.Context, id string, b domain.Berita) (domai
 	if b.GambarSampul != "" {
 		cur.GambarSampul = b.GambarSampul
 	}
+	if b.GambarTengah != "" {
+		cur.GambarTengah = b.GambarTengah
+	}
 	if b.Tags != nil {
 		cur.Tags = b.Tags
 	}
@@ -119,6 +139,43 @@ func (s *Service) Update(ctx context.Context, id string, b domain.Berita) (domai
 
 func (s *Service) Delete(ctx context.Context, id string) error {
 	return s.repo.Delete(ctx, id)
+}
+
+// ListKomentar mengembalikan daftar komentar untuk sebuah berita.
+func (s *Service) ListKomentar(ctx context.Context, beritaID string) ([]domain.BeritaKomentar, error) {
+	return s.repo.ListKomentar(ctx, beritaID)
+}
+
+// AddKomentar membuat komentar baru oleh user (jika login). userID boleh nil
+// (tidak login), nama diambil dari user yang login atau dikirim dari form.
+func (s *Service) AddKomentar(ctx context.Context, beritaID string, userID *string, nama, konten string) (domain.BeritaKomentar, error) {
+	k := domain.BeritaKomentar{
+		ID:       apputil.NewID(),
+		BeritaID: beritaID,
+		UserID:   userID,
+		Nama:     strings.TrimSpace(nama),
+		Konten:   strings.TrimSpace(konten),
+	}
+	if k.Nama == "" {
+		k.Nama = "Warga"
+	}
+	if len(k.Konten) < 1 || len(k.Konten) > 1000 {
+		return k, domain.ErrValidation
+	}
+	k.CreatedAt = time.Now()
+	if err := s.repo.CreateKomentar(ctx, k); err != nil {
+		return k, err
+	}
+	return k, nil
+}
+
+// DeleteKomentar menghapus komentar. Admin boleh menghapus komentar apa pun;
+// selain admin hanya pemilik komentar yang boleh menghapus.
+func (s *Service) DeleteKomentar(ctx context.Context, id string, userID *string, isAdmin bool) error {
+	if !isAdmin && (userID == nil || *userID == "") {
+		return domain.ErrForbidden
+	}
+	return s.repo.DeleteKomentar(ctx, id, userID)
 }
 
 func uidTail() string { return time.Now().Format("150405") }

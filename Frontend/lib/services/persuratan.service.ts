@@ -17,7 +17,7 @@ export type PengajuanTracking = Pick<
 >;
 
 export async function getJenisSuratList(): Promise<JenisSurat[]> {
-  const items = await apiRequest<JenisSurat[]>('/layanan');
+  const items = await apiRequest<JenisSurat[]>('/layanan', { revalidateSeconds: 3600 });
   const seenKode = new Set<string>();
   const seenNama = new Set<string>();
   return items.filter((item) => {
@@ -76,18 +76,47 @@ export function isLampiranImage(lamp: Pick<LampiranFile, 'nama' | 'tipe'>): bool
 export function isLampiranPdf(lamp: Pick<LampiranFile, 'nama' | 'tipe'>): boolean {
   return /\.pdf$/i.test(lamp.nama) || /pdf/i.test(lamp.tipe);
 }
-export async function getVerifikasiSurat(code: string): Promise<any> {
-  try { return await apiRequest(`/verifikasi/surat/${encodeURIComponent(code)}`); }
+/** Hasil verifikasi keaslian surat dari kode QR/resi. */
+export interface HasilVerifikasiSurat {
+  valid: boolean;
+  nomorSurat: string;
+  jenisSuratNama: string;
+  pemohonNama: string;
+  subjekNama?: string;
+  tanggalTerbit: string;
+  penandatangan: string;
+  jabatanPenandatangan: string;
+  status: string;
+}
+
+/** Baris pada Buku Agenda Surat Keluar (dashboard admin). */
+export interface BukuAgendaItem {
+  noUrut: number;
+  id: string;
+  nomorResi: string;
+  nomorSuratResmi: string;
+  jenisSuratKode: string;
+  jenisSuratNama: string;
+  pemohonNama: string;
+  pemohonNik: string;
+  tanggalTerbit: string;
+  penandatangan: string;
+  filePdfUrl?: string;
+  qrCode?: string;
+}
+
+export async function getVerifikasiSurat(code: string): Promise<HasilVerifikasiSurat | null> {
+  try { return await apiRequest<HasilVerifikasiSurat>(`/verifikasi/surat/${encodeURIComponent(code)}`); }
   catch (error) { if (error instanceof ApiError && error.status === 404) return null; throw error; }
 }
 
-export async function getPendudukByNIK(nik: string): Promise<any> {
-  try { return await apiRequest(`/penduduk/nik/${encodeURIComponent(nik)}`, { auth: true }); }
+export async function getPendudukByNIK(nik: string): Promise<Record<string, unknown> | null> {
+  try { return await apiRequest<Record<string, unknown>>(`/penduduk/nik/${encodeURIComponent(nik)}`, { auth: true }); }
   catch (error) { if (error instanceof ApiError && error.status === 404) return null; throw error; }
 }
 
-export async function getBukuAgendaAdmin(): Promise<any[]> {
-  return apiRequest<any[]>('/admin/pengajuan/buku-agenda', { auth: true });
+export async function getBukuAgendaAdmin(): Promise<BukuAgendaItem[]> {
+  return apiRequest<BukuAgendaItem[]>('/admin/pengajuan/buku-agenda', { auth: true });
 }
 
 

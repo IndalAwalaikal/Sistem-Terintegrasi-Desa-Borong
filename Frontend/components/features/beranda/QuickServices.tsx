@@ -23,12 +23,12 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 const iconMap: Record<string, React.ReactNode> = {
   SKD: <Home className="w-6 h-6 text-primary-600" />,
   SKU: <Store className="w-6 h-6 text-secondary-600" />,
-  SKTM: <Heart className="w-6 h-6 text-rose-600" />,
-  SPK: <CreditCard className="w-6 h-6 text-amber-600" />,
-  SPKK: <Users className="w-6 h-6 text-indigo-600" />,
-  SPN: <HeartHandshake className="w-6 h-6 text-pink-600" />,
-  SKL: <Baby className="w-6 h-6 text-sky-600" />,
-  SKM: <FileHeart className="w-6 h-6 text-purple-600" />,
+  SKTM: <Heart className="w-6 h-6 text-primary-600" />,
+  SPK: <CreditCard className="w-6 h-6 text-secondary-600" />,
+  SPKK: <Users className="w-6 h-6 text-primary-600" />,
+  SPN: <HeartHandshake className="w-6 h-6 text-secondary-600" />,
+  SKL: <Baby className="w-6 h-6 text-primary-600" />,
+  SKM: <FileHeart className="w-6 h-6 text-secondary-600" />,
 };
 
 interface QuickServicesProps {
@@ -40,11 +40,11 @@ export const QuickServices: React.FC<QuickServicesProps> = ({ services }) => {
   const popularServices = services.slice(0, 6);
 
   return (
-    <section className="py-20 bg-neutral-50 dark:bg-neutral-900/50">
+    <section className="py-20 bg-white dark:bg-neutral-950">
       <div className="container-desa">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-100 dark:bg-primary-950 text-primary-700 dark:text-primary-300 text-xs font-bold mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-100 text-primary-700 text-xs font-bold dark:bg-primary-950 dark:text-primary-300 mb-3">
               <span>{t('Home.qsBadge')}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">

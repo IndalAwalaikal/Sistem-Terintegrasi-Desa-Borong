@@ -223,7 +223,7 @@ export default function AjukanSuratPage() {
 
         {/* Header */}
         <div className="bg-gradient-to-r from-primary-900 via-primary-800 to-secondary-900 text-white rounded-3xl p-6 sm:p-8 space-y-3 shadow-xl">
-          <span className="bg-accent-500 text-neutral-950 text-xs font-extrabold px-3 py-1 rounded-full uppercase">
+          <span className="bg-accent-500 text-white text-xs font-extrabold px-3 py-1 rounded-full uppercase">
             FORMULIR ONLINE • {jenisSurat.kode}
           </span>
           <h1 className="text-2xl sm:text-3xl font-extrabold">{jenisSurat.nama}</h1>

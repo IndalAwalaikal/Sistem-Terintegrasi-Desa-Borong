@@ -3,46 +3,44 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
-import { ShieldCheck, ShieldAlert, FileText, CheckCircle2, Clock, MapPin, Building2 } from 'lucide-react';
-
-interface VerificationResult {
-  valid: boolean;
-  nomorSurat: string;
-  jenisSuratNama: string;
-  pemohonNama: string;
-  subjekNama?: string;
-  tanggalTerbit: string;
-  penandatangan: string;
-  jabatanPenandatangan: string;
-  status: string;
-}
+import { ShieldCheck, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { getVerifikasiSurat } from '@/lib/services/persuratan.service';
+import type { HasilVerifikasiSurat } from '@/lib/services/persuratan.service';
 
 export default function VerifikasiSuratPage() {
   const params = useParams();
   const code = (params?.code as string) || '';
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<VerificationResult | null>(null);
+    const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<HasilVerifikasiSurat | null>(null);
 
   useEffect(() => {
-    // Simulate verification look up
-    const timer = setTimeout(() => {
-      if (code) {
-        setData({
-          valid: true,
-          nomorSurat: '474.1/042/DB/VIII/2026',
-          jenisSuratNama: 'Surat Keterangan Usaha (SKU)',
-          pemohonNama: 'Ahmad Subagyo',
-          tanggalTerbit: '16 Agustus 2026',
-          penandatangan: 'H. Muhammad Rusli, S.Sos.',
-          jabatanPenandatangan: 'Kepala Desa Borong',
-          status: 'RESMI & TERVERIFIKASI',
-        });
-      }
+    if (!code) {
       setLoading(false);
-    }, 800);
+      return;
+    }
 
-    return () => clearTimeout(timer);
+    let cancelled = false;
+
+    getVerifikasiSurat(code)
+      .then((result) => {
+        if (!cancelled) {
+          setData(result);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          // Jika API error (bukan 404), tetap tampilkan loading=false
+          // sehingga UI menampilkan state "tidak ditemukan"
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [code]);
 
   return (
@@ -60,14 +58,17 @@ export default function VerifikasiSuratPage() {
               Sistem Verifikasi Keaslian Surat
             </h1>
             <p className="text-xs sm:text-sm text-neutral-500 mt-1">
-              Pemerintah Desa Borong, Kec. Lappariaja, Kab. Bone
+                            Pemerintah Desa Borong, Kec. Herlang, Kab. Bulukumba
             </p>
           </div>
         </div>
 
-        {loading ? (
-          <div className="p-8 text-center text-xs text-neutral-500">
-            Memverifikasi tanda tangan digital &amp; keaslian dokumen...
+                        {loading ? (
+          <div className="p-4 space-y-4">
+            <Skeleton variant="rectangular" className="h-4 w-5/6 rounded" />
+            <Skeleton variant="rectangular" className="h-4 w-3/4 rounded" />
+            <Skeleton variant="rectangular" className="h-4 w-full rounded" />
+            <Skeleton variant="rectangular" className="h-4 w-2/3 rounded" />
           </div>
         ) : data?.valid ? (
           <div className="space-y-4">

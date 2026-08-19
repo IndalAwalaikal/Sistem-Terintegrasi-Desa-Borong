@@ -124,6 +124,8 @@ export interface TransaksiPajakFilter {
   page?: number;
   limit?: number;
   includeBatal?: boolean;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface PaginatedResult<T> {
@@ -131,4 +133,5 @@ export interface PaginatedResult<T> {
   total: number;
   page: number;
   limit: number;
+  totalPages: number;
 }

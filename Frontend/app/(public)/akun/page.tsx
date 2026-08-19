@@ -7,7 +7,8 @@ import { getPengajuanByUser } from '@/lib/services/persuratan.service';
 import { getPengaduanByUser } from '@/lib/services/pengaduan.service';
 import type { PengajuanSurat } from '@/types/persuratan';
 import type { Pengaduan } from '@/types/pengaduan';
-import { Card, CardHeader, CardBody } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -16,12 +17,12 @@ import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
 import { updateProfileService } from '@/lib/services/auth.service';
 import { formatTanggal } from '@/lib/utils/format';
-import { User, FileText, MessageSquare, Clock, ArrowRight, ShieldCheck, LogOut, Download, Pencil, XCircle, UserCheck } from 'lucide-react';
+import { FileText, MessageSquare, Clock, LogOut, Download, Pencil, XCircle, UserCheck, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AkunPage() {
   const router = useRouter();
-  const { user, isAuthenticated, logout, updateUser } = useAuthStore();
+  const { user, isAuthenticated, hasHydrated, setHasHydrated, logout, setUser } = useAuthStore();
 
   const [pengajuanList, setPengajuanList] = useState<PengajuanSurat[]>([]);
   const [pengaduanList, setPengaduanList] = useState<Pengaduan[]>([]);
@@ -46,7 +47,20 @@ export default function AkunPage() {
     passwordBaru: '',
   });
 
+  // Tunggu sampai Zustand persist selesai hydrate dari localStorage
+  // sebelum mengecek status autentikasi, agar tidak terjadi race condition.
   useEffect(() => {
+    if (useAuthStore.persist.hasHydrated()) {
+      setHasHydrated(true);
+    }
+    const unsubscribe = useAuthStore.persist.onFinishHydration(() => {
+      setHasHydrated(true);
+    });
+    return () => unsubscribe();
+  }, [setHasHydrated]);
+
+  useEffect(() => {
+    if (!hasHydrated) return;
     if (!isAuthenticated || !user) {
       router.push('/login');
       return;
@@ -57,9 +71,29 @@ export default function AkunPage() {
     }
     getPengajuanByUser(user.id).then(setPengajuanList);
     getPengaduanByUser(user.id).then(setPengaduanList);
-  }, [isAuthenticated, user, router]);
+  }, [hasHydrated, isAuthenticated, user, router]);
+
+    if (!hasHydrated) {
+    return (
+      <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+        <div className="container-desa py-10 space-y-6">
+          <Skeleton variant="rectangular" className="h-8 w-48 rounded-xl" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-4">
+              <Skeleton variant="rectangular" className="h-10 w-full rounded-xl" />
+              <Skeleton variant="rectangular" className="h-10 w-full rounded-xl" />
+              <Skeleton variant="rectangular" className="h-10 w-full rounded-xl" />
+            </div>
+            <Skeleton variant="rectangular" className="h-48 w-full rounded-2xl" />
+          </div>
+          <Skeleton variant="rectangular" className="h-64 w-full rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
 
   if (!user) return null;
+
 
   const openProfile = () => {
     const rawStatus = (user.statusPerkawinan || '').toUpperCase().replace(/_/g, ' ');
@@ -111,7 +145,7 @@ export default function AkunPage() {
         passwordBaru: profileForm.passwordBaru,
       };
       const updated = await updateProfileService(user.id, normalizedForm);
-      updateUser(updated);
+      setUser(updated);
       setProfileOpen(false);
     } finally {
       setProfileSaving(false);
@@ -130,7 +164,7 @@ export default function AkunPage() {
             <div>
               <div className="flex items-center justify-center sm:justify-start gap-2">
                 <h1 className="text-xl font-bold">{user.nama}</h1>
-                <span className="bg-accent-500 text-neutral-950 text-[10px] font-extrabold px-2 py-0.5 rounded-full capitalize">
+                <span className="bg-accent-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full capitalize">
                   {user.role}
                 </span>
               </div>
@@ -233,10 +267,10 @@ export default function AkunPage() {
         {/* Riwayat Pengajuan Surat */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary-600" />
-              Riwayat Permohonan Surat
-            </h2>
+            <h1 className="text-2xl font-black text-neutral-900 dark:text-white flex items-center gap-3">
+              <LayoutDashboard className="w-8 h-8 text-primary-600" />
+              Dashboard Warga
+            </h1>
             <Link href="/layanan">
               <Button variant="primary" size="sm">
                 Ajukan Surat Baru

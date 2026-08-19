@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { formatTanggal, estimasiWaktuBaca } from '@/lib/utils/format';
-import { Calendar, ArrowRight } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { PublicMasthead } from '@/components/layout/PublicMasthead';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
@@ -77,7 +77,6 @@ export const BeritaClient: React.FC<BeritaClientProps> = ({ data, kategori }) =>
                     src={article.gambarSampul || 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80'}
                     alt={article.judul}
                     fill
-                    unoptimized
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                   />

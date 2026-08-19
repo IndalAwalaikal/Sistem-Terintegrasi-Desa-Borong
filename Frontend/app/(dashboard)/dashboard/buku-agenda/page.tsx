@@ -3,10 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { getBukuAgendaAdmin } from '@/lib/services/persuratan.service';
 import { Card } from '@/components/ui/Card';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Download, FileSpreadsheet, Search, ShieldCheck, Printer, Calendar, BookOpen } from 'lucide-react';
+import { FileSpreadsheet, Search, ShieldCheck, Calendar, BookOpen } from 'lucide-react';
 import { useToastStore } from '@/store/toastStore';
+import { useSortableData } from '@/hooks/useSortableData';
+import { SortableHeader } from '@/components/ui/SortableHeader';
 
 interface AgendaItem {
   noUrut: number;
@@ -51,6 +54,8 @@ export default function DashboardBukuAgendaPage() {
       item.pemohonNik?.toLowerCase().includes(search.toLowerCase()) ||
       item.jenisSuratNama?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const { sorted, requestSort, sortKey, direction } = useSortableData(filtered);
 
   const handleExportCSV = () => {
     if (items.length === 0) {
@@ -124,8 +129,10 @@ export default function DashboardBukuAgendaPage() {
       {/* Agenda Table */}
       <Card className="overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-sm">
         {loading ? (
-          <div className="p-12 text-center text-xs text-neutral-500">
-            Memuat registrasi Buku Agenda Surat Keluar...
+          <div className="p-8 space-y-3">
+            <Skeleton className="h-10 w-full rounded-xl" />
+            <Skeleton className="h-10 w-full rounded-xl" />
+            <Skeleton className="h-10 w-full rounded-xl" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-12 text-center text-xs text-neutral-500">
@@ -137,16 +144,51 @@ export default function DashboardBukuAgendaPage() {
               <thead className="bg-neutral-100 dark:bg-neutral-950 text-neutral-600 dark:text-neutral-300 font-bold uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-800">
                 <tr>
                   <th className="px-4 py-3 text-center w-12">No</th>
-                  <th className="px-4 py-3">Tanggal</th>
-                  <th className="px-4 py-3">Nomor Surat Resmi</th>
-                  <th className="px-4 py-3">Jenis Surat</th>
-                  <th className="px-4 py-3">Nama Pemohon &amp; NIK</th>
-                  <th className="px-4 py-3">Penandatangan</th>
+                  <SortableHeader
+                    sortKey="tanggalTerbit"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={(k) => requestSort(k as keyof AgendaItem)}
+                  >
+                    Tanggal
+                  </SortableHeader>
+                  <SortableHeader
+                    sortKey="nomorSuratResmi"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={(k) => requestSort(k as keyof AgendaItem)}
+                  >
+                    Nomor Surat Resmi
+                  </SortableHeader>
+                  <SortableHeader
+                    sortKey="jenisSuratNama"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={(k) => requestSort(k as keyof AgendaItem)}
+                  >
+                    Jenis Surat
+                  </SortableHeader>
+                  <SortableHeader
+                    sortKey="pemohonNama"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={(k) => requestSort(k as keyof AgendaItem)}
+                  >
+                    Nama Pemohon &amp; NIK
+                  </SortableHeader>
+                  <SortableHeader
+                    sortKey="penandatangan"
+                    activeKey={sortKey}
+                    direction={direction}
+                    onSort={(k) => requestSort(k as keyof AgendaItem)}
+                  >
+                    Penandatangan
+                  </SortableHeader>
                   <th className="px-4 py-3 text-center">Verifikasi Digital</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                {filtered.map((it) => (
+                {sorted.map((it) => (
                   <tr key={it.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-950/60 transition-colors">
                     <td className="px-4 py-3 font-bold text-center text-neutral-400">{it.noUrut}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-neutral-600 dark:text-neutral-300">{it.tanggalTerbit}</td>

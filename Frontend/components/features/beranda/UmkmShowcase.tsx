@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShoppingBag, Phone, ArrowRight } from 'lucide-react';
+import { Phone, ArrowRight } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import type { Umkm } from '@/types/umkm';
@@ -17,11 +17,19 @@ export const UmkmShowcase: React.FC<UmkmShowcaseProps> = ({ businesses }) => {
   const { t } = useTranslation();
 
   return (
-    <section className="py-20 bg-neutral-50 dark:bg-neutral-900/40">
-      <div className="container-desa">
+    <section className="py-20 bg-neutral-100 dark:bg-neutral-900/60 relative overflow-hidden">
+      {/* Decorative backdrop glow */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full opacity-[0.05] dark:opacity-[0.03] blur-3xl"
+        style={{
+          background: "radial-gradient(circle, #2474d4 0%, transparent 70%)",
+        }}
+      />
+      <div className="container-desa relative z-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-100 dark:bg-amber-950 text-amber-800 dark:text-accent-300 text-xs font-bold mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-100 text-primary-700 text-xs font-bold dark:bg-primary-950 dark:text-primary-300 mb-3">
               <span>{t('Home.umkmBadge')}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">
@@ -42,14 +50,14 @@ export const UmkmShowcase: React.FC<UmkmShowcaseProps> = ({ businesses }) => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {businesses.slice(0, 4).map((item) => (
-            <Card key={item.id} hoverable className="group">
+            <Card key={item.id} hoverable className="group hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary-500/5 dark:hover:shadow-black/30 transition-all duration-300">
               <div className="relative h-52 w-full overflow-hidden rounded-t-2xl">
                 <Image
                   src={item.foto[0]}
                   alt={item.namaUsaha}
                   fill
                   sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  className="object-cover group-hover:scale-108 transition-transform duration-700 ease-out"
                 />
                 <div className="absolute top-3 left-3">
                   <span className="bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md text-neutral-900 dark:text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md">

@@ -291,7 +291,6 @@ export default function StrukturOrganisasiPage() {
                             fill
                             sizes="128px"
                             className="object-cover hover:scale-105 transition-transform duration-500"
-                            unoptimized
                           />
                         </div>
                       </div>
@@ -371,7 +370,6 @@ export default function StrukturOrganisasiPage() {
                         fill
                         sizes="96px"
                         className="object-cover"
-                        unoptimized
                       />
                     </div>
                     <div>
@@ -426,7 +424,6 @@ export default function StrukturOrganisasiPage() {
                           fill
                           sizes="80px"
                           className="object-cover"
-                          unoptimized
                         />
                       </div>
                       <div className="space-y-1">
@@ -483,7 +480,6 @@ export default function StrukturOrganisasiPage() {
                           fill
                           sizes="80px"
                           className="object-cover"
-                          unoptimized
                         />
                       </div>
                       <div className="space-y-1">
@@ -529,7 +525,6 @@ export default function StrukturOrganisasiPage() {
                           fill
                           sizes="80px"
                           className="object-cover"
-                          unoptimized
                         />
                       </div>
                       <div className="space-y-1">
@@ -581,7 +576,6 @@ export default function StrukturOrganisasiPage() {
                       fill
                       sizes="96px"
                       className="object-cover"
-                      unoptimized
                     />
                   </div>
                   <div className="space-y-1">
@@ -625,7 +619,6 @@ export default function StrukturOrganisasiPage() {
                     fill
                     sizes="112px"
                     className="object-cover"
-                    unoptimized
                   />
                 </div>
               </div>

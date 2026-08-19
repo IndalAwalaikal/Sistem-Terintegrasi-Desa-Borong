@@ -9,11 +9,13 @@ import {
 } from '@/lib/services/fasilitas.service';
 import type { FasilitasDesa, KategoriFasilitas } from '@/types/fasilitas';
 import { Card } from '@/components/ui/Card';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Building2, Edit, Trash2, Save, Search, MapPin } from 'lucide-react';
 import { useToastStore } from '@/store/toastStore';
 
@@ -58,7 +60,6 @@ export default function DashboardFasilitasPage() {
 
   useEffect(() => {
     void refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openAdd = () => {
@@ -111,14 +112,23 @@ export default function DashboardFasilitasPage() {
     }
   };
 
-  const handleDelete = async (item: FasilitasDesa) => {
-    if (!window.confirm(`Hapus fasilitas "${item.nama}"?`)) return;
+  const [deleteTarget, setDeleteTarget] = useState<FasilitasDesa | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = (item: FasilitasDesa) => setDeleteTarget(item);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await deleteFasilitasDesa(item.id);
+      await deleteFasilitasDesa(deleteTarget.id);
       showSuccess('Fasilitas berhasil dihapus.');
       await refresh();
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Gagal menghapus fasilitas.');
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -127,7 +137,16 @@ export default function DashboardFasilitasPage() {
   );
 
   if (loading) {
-    return <p className="text-sm text-neutral-500">Memuat fasilitas publik desa…</p>;
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <Skeleton className="h-32 w-full rounded-2xl" />
+          <Skeleton className="h-32 w-full rounded-2xl" />
+          <Skeleton className="h-32 w-full rounded-2xl" />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -252,6 +271,15 @@ export default function DashboardFasilitasPage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Hapus Fasilitas"
+        message={<>Yakin ingin menghapus fasilitas <strong>&quot;{deleteTarget?.nama}&quot;</strong>? Tindakan ini tidak dapat dibatalkan.</>}
+        isLoading={deleting}
+        onConfirm={() => void handleConfirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

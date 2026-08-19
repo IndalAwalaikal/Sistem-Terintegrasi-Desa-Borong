@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { pengaduanSchema, type PengaduanSchemaType } from '@/lib/validations/pengaduan.schema';
@@ -13,7 +14,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { MessageSquare, Send, CheckCircle2, ShieldCheck, MapPin } from 'lucide-react';
+import { MessageSquare, Send, CheckCircle2, MapPin } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
 export default function PengaduanPage() {
@@ -129,6 +130,12 @@ export default function PengaduanPage() {
             <Button variant="primary" onClick={() => setModalOpen(false)} className="w-full">
               {t('Pengaduan.done')}
             </Button>
+            <Link
+              href={`/pengaduan/lacak?tiket=${encodeURIComponent(successTiket)}`}
+              className="inline-flex items-center justify-center w-full gap-2 text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline"
+            >
+              Lacak Status Pengaduan Ini
+            </Link>
           </div>
         </Modal>
       </div>

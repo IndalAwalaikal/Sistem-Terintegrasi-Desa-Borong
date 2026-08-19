@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"context"
+	"strings"
 	"database/sql"
 	"encoding/json"
 	"time"
@@ -231,12 +232,101 @@ func (r *PengajuanRepo) scanList(ctx context.Context, qy string, args ...any) ([
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	for i := range out {
-		if err := r.loadPengajuan(ctx, &out[i]); err != nil {
+	if len(out) > 0 {
+		if err := r.loadPengajuanBatch(ctx, out); err != nil {
 			return nil, err
 		}
 	}
 	return out, nil
+}
+
+func (r *PengajuanRepo) loadPengajuanBatch(ctx context.Context, items []domain.PengajuanSurat) error {
+	if len(items) == 0 {
+		return nil
+	}
+	ids := make([]string, len(items))
+	for i, it := range items {
+		ids[i] = it.ID
+	}
+	placeholders := strings.Repeat("?,", len(ids)-1) + "?"
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	lampMap := map[string][]domain.LampiranFile{}
+	riwayatMap := map[string][]domain.RiwayatStatus{}
+	stepMap := map[string][]domain.ApprovalStep{}
+	lampRows, err := q(ctx, r.db).QueryContext(ctx, "SELECT id,pengajuan_id,nama_file,url,ukuran_bytes,mime_type FROM pengajuan_lampiran WHERE pengajuan_id IN ("+placeholders+")", args...)
+	if err == nil {
+		for lampRows.Next() {
+			var l domain.LampiranFile
+			var pid string
+			if err := lampRows.Scan(&l.ID, &pid, &l.Nama, &l.URL, &l.UkuranBytes, &l.MimeType); err == nil {
+				lampMap[pid] = append(lampMap[pid], l)
+			}
+		}
+		lampRows.Close()
+	}
+	histRows, err := q(ctx, r.db).QueryContext(ctx, "SELECT rs.pengajuan_id,rs.status,rs.created_at,COALESCE(u.nama,''),COALESCE(rs.catatan,'') FROM pengajuan_riwayat_status rs LEFT JOIN users u ON u.id=rs.changed_by WHERE rs.pengajuan_id IN ("+placeholders+") ORDER BY rs.created_at", args...)
+	if err == nil {
+		for histRows.Next() {
+			var pid, st, oleh, cat string
+			var rw domain.RiwayatStatus
+			if err := histRows.Scan(&pid, &st, &rw.Waktu, &oleh, &cat); err == nil {
+				rw.Status = domain.StatusPengajuan(st)
+				if oleh != "" {
+					ow := oleh
+					rw.Oleh = &ow
+				}
+				if cat != "" {
+					cw := cat
+					rw.Catatan = &cw
+				}
+				riwayatMap[pid] = append(riwayatMap[pid], rw)
+			}
+		}
+		histRows.Close()
+	}
+	stepRows, err := q(ctx, r.db).QueryContext(ctx, "SELECT pas.id,pas.pengajuan_id,pas.step_order,pas.role_required,pas.actor_id,COALESCE(u.nama,''),pas.status,COALESCE(pas.catatan,''),pas.signed_at FROM pengajuan_approval_step pas LEFT JOIN users u ON u.id=pas.actor_id WHERE pas.pengajuan_id IN ("+placeholders+") ORDER BY pas.step_order", args...)
+	if err == nil {
+		defer stepRows.Close()
+		for stepRows.Next() {
+			var st domain.ApprovalStep
+			var pid, actorID, actorNama, catatan string
+			var signedAt sql.NullTime
+			if err := stepRows.Scan(&st.ID, &pid, &st.StepOrder, &st.RoleRequired, &actorID, &actorNama, &st.Status, &catatan, &signedAt); err == nil {
+				if actorID != "" {
+					aid := actorID
+					st.ActorID = &aid
+				}
+				if actorNama != "" {
+					an := actorNama
+					st.ActorNama = &an
+				}
+				if catatan != "" {
+					ct := catatan
+					st.Catatan = &ct
+				}
+				if signedAt.Valid {
+					st.SignedAt = &signedAt.Time
+				}
+				stepMap[pid] = append(stepMap[pid], st)
+			}
+		}
+	}
+	for i := range items {
+		id := items[i].ID
+		if v, ok := lampMap[id]; ok {
+			items[i].Lampiran = v
+		}
+		if v, ok := riwayatMap[id]; ok {
+			items[i].Riwayat = v
+		}
+		if v, ok := stepMap[id]; ok {
+			items[i].ApprovalSteps = v
+		}
+	}
+	return nil
 }
 
 func (r *PengajuanRepo) UpdateStatus(ctx context.Context, id string, status domain.StatusPengajuan, catatan, changedBy *string) error {

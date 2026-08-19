@@ -13,8 +13,9 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Modal } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToastStore } from '@/store/toastStore';
-import { ShoppingBag, Plus, Edit, Trash2, Save, Phone, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, Phone, Search } from 'lucide-react';
 
 export default function DashboardUmkmPage() {
   const [umkms, setUmkms] = useState<Umkm[]>([]);
@@ -50,7 +51,6 @@ export default function DashboardUmkmPage() {
 
   useEffect(() => {
     void refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openAdd = () => {
@@ -107,14 +107,23 @@ export default function DashboardUmkmPage() {
     }
   };
 
-  const handleDelete = async (u: Umkm) => {
-    if (!window.confirm(`Hapus UMKM "${u.namaUsaha}"?`)) return;
+  const [deleteTarget, setDeleteTarget] = useState<Umkm | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = (u: Umkm) => setDeleteTarget(u);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await deleteUmkmAdmin(u.id);
+      await deleteUmkmAdmin(deleteTarget.id);
       showSuccess('Data UMKM berhasil dihapus.');
       await refresh();
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Gagal menghapus UMKM.');
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -211,6 +220,15 @@ export default function DashboardUmkmPage() {
           </Button>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Hapus UMKM"
+        message={<>Yakin ingin menghapus UMKM <strong>&quot;{deleteTarget?.namaUsaha}&quot;</strong>? Tindakan ini tidak dapat dibatalkan.</>}
+        isLoading={deleting}
+        onConfirm={() => void handleConfirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

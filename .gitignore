@@ -1,31 +1,31 @@
-# Environment files
+# =====================================================================
+# Environment files — keep secrets & local overrides out of VCS
+# =====================================================================
 .env
 .env.*
 !.env.example
 
-# Node / Frontend
+# =====================================================================
+# Node.js / Frontend (Next.js 16)
+# =====================================================================
 Frontend/node_modules/
 Frontend/.next/
 Frontend/out/
 Frontend/dist/
 Frontend/build/
-Frontend/coverage/
 Frontend/.turbo/
 Frontend/.cache/
+Frontend/coverage/
+Frontend/.env.local
+Frontend/.eslintcache
 
-# Backend / Go
-Backend/bin/
-Backend/tmp/
-Backend/uploads/
-Backend/.idea/
-Backend/.vscode/
-Backend/*.test
-Backend/*.out
-
-# General build output
+# General Node tooling (covers stray root-level artifacts)
+node_modules/
+.next/
+out/
 build/
 dist/
-out/
+.cache/
 coverage/
 *.tsbuildinfo
 
@@ -35,38 +35,78 @@ npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 
-# OS / editor files
+# =====================================================================
+# Go Backend
+# =====================================================================
+Backend/bin/
+Backend/tmp/
+Backend/uploads/
+# database backup output (scripts/backup.sh)
+Backend/backups/
+Backend/.env.local
+Backend/.eslintcache
+Backend/*.test
+Backend/*.out
+Backend/*.prof
+go-build-cache/
+
+# =====================================================================
+# Python tooling (optional scripts/helpers)
+# =====================================================================
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# =====================================================================
+# OS / Editor / IDE
+# =====================================================================
 .DS_Store
 Thumbs.db
-.idea/
-.vscode/
 *.swp
 *.swo
+*~
+.idea/
+.vscode/
+*.iml
+*.ipynb_checkpoints
 
-# Docker local artifacts
+# =====================================================================
+# Docker
+# =====================================================================
 docker-compose.override.yml
 
-# Sensitive / local files
+# =====================================================================
+# Secrets & runtime artifacts
+# =====================================================================
 *.pem
 *.key
 *.crt
+*.cer
 *.sqlite
 *.sqlite3
 *.db
+*.db-wal
+*.db-shm
+access.log*
+error.log*
 
-# Local uploads and generated media
+# =====================================================================
+# Local uploads & generated media
+# =====================================================================
 uploads/
 public/uploads/
 media/
 cache/
 
-# Temporary files
+# =====================================================================
+# Temp files & tooling caches
+# =====================================================================
 tmp/
 temp/
-
-# Test artifacts
-coverage/
-htmlcov/
-
-# Optional: keep examples
-!.env.example
+*.tmp
+.kilo/
+.kilocode/
+.Trash-*
+.turbo
+.pnpm-store

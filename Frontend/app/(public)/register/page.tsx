@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslation } from '@/lib/i18n/useTranslation';
 import { registerSchema, type RegisterSchemaType } from '@/lib/validations/auth.schema';
 import { registerService, verifyOtpService, resendOtpService } from '@/lib/services/auth.service';
 import { useAuthStore } from '@/store/authStore';
@@ -13,13 +14,14 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
-import { User, Mail, Lock, CreditCard, Phone, MapPin, UserPlus, Eye, EyeOff, Clock } from 'lucide-react';
+import { User, Mail, Lock, CreditCard, Phone, UserPlus, Eye, EyeOff, Clock } from 'lucide-react';
 
 const OTP_DURATION_SECONDS = 600; // 10 menit masa berlaku OTP
 
 export default function RegisterPage() {
+  const { t } = useTranslation();
   const router = useRouter();
-  const setSession = useAuthStore((s) => s.setSession);
+  const setUser = useAuthStore((s) => s.setUser);
   const { showSuccess, showError } = useToastStore();
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -67,9 +69,9 @@ export default function RegisterPage() {
       await registerService(data);
       setRegEmail(data.email);
       setStep('otp');
-      showSuccess(`Kode OTP berhasil dikirimkan ke email ${data.email}!`);
-    } catch (err: any) {
-      const msg = err.message || 'Registrasi gagal.';
+      showSuccess(t('Register.otpSuccess', `Kode OTP berhasil dikirimkan ke email ${data.email}!`));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t('Register.otpError');
       setErrorMsg(msg);
       showError(msg);
     } finally {
@@ -83,11 +85,11 @@ export default function RegisterPage() {
     setResendMsg('');
     try {
       const session = await verifyOtpService(regEmail, code);
-      setSession(session);
-      showSuccess('Selamat! Akun Anda berhasil terverifikasi dan terbuat.');
+      setUser(session);
+      showSuccess(t('Register.verifySuccess'));
       router.push('/akun');
-    } catch (err: any) {
-      const msg = err.message || 'Verifikasi gagal.';
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t('Register.verifyError');
       setErrorMsg(msg);
       showError(msg);
     } finally {
@@ -100,12 +102,12 @@ export default function RegisterPage() {
     setResendMsg('');
     try {
       await resendOtpService(regEmail);
-      const msg = 'Kode verifikasi telah dikirim ulang ke email Anda.';
+      const msg = t('Register.resendMsg');
       setResendMsg(msg);
       setOtpTimer(OTP_DURATION_SECONDS);
       showSuccess(msg);
-    } catch (err: any) {
-      const msg = err.message || 'Gagal mengirim ulang kode.';
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t('Register.resendError');
       setErrorMsg(msg);
       showError(msg);
     }
@@ -116,10 +118,10 @@ export default function RegisterPage() {
       <div className="container-desa max-w-lg space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-extrabold text-neutral-900 dark:text-white">
-            Pendaftaran Akun Warga
+            {t('Register.title')}
           </h1>
           <p className="text-xs text-neutral-500">
-            Lengkapi data diri Anda sesuai KTP untuk mempermudah pelayanan surat desa.
+            {t('Register.subtitle')}
           </p>
         </div>
 
@@ -133,16 +135,16 @@ export default function RegisterPage() {
           {step === 'form' ? (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Input
-              label="Nama Lengkap (sesuai KTP)"
-              placeholder="Maria Liku Padang"
+              label={t('Register.namaLabel')}
+              placeholder={t('Register.namaPlaceholder')}
               leftIcon={<User className="w-4 h-4" />}
               {...register('nama')}
               error={errors.nama?.message}
             />
 
             <Input
-              label="NIK (16 Digit)"
-              placeholder="7326014507850003"
+              label={t('Register.nikLabel')}
+              placeholder={t('Register.nikPlaceholder')}
               leftIcon={<CreditCard className="w-4 h-4" />}
               {...register('nik')}
               error={errors.nik?.message}
@@ -150,15 +152,15 @@ export default function RegisterPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
-                label="Email"
-                placeholder="maria@gmail.com"
+                label={t('Register.emailLabel')}
+                placeholder={t('Register.emailPlaceholder')}
                 leftIcon={<Mail className="w-4 h-4" />}
                 {...register('email')}
                 error={errors.email?.message}
               />
               <Input
-                label="Nomor Telepon / WA"
-                placeholder="081234567890"
+                label={t('Register.teleponLabel')}
+                placeholder={t('Register.teleponPlaceholder')}
                 leftIcon={<Phone className="w-4 h-4" />}
                 {...register('telepon')}
                 error={errors.telepon?.message}
@@ -166,26 +168,26 @@ export default function RegisterPage() {
             </div>
 
             <Textarea
-              label="Alamat Lengkap"
-              placeholder="Dusun Borong Utara RT 02/RW 01"
+              label={t('Register.alamatLabel')}
+              placeholder={t('Register.alamatPlaceholder')}
               rows={2}
               {...register('alamat')}
               error={errors.alamat?.message}
             />
 
             <Input
-              label="Password"
+              label={t('Register.passwordLabel')}
               type={showPassword ? 'text' : 'password'}
-              placeholder="••••••••"
+              placeholder={t('Register.passwordPlaceholder')}
               leftIcon={<Lock className="w-4 h-4" />}
-              rightIcon={<button type="button" onClick={() => setShowPassword(!showPassword)} className="pointer-events-auto rounded p-1 text-neutral-400 hover:text-primary-600" aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>}
+              rightIcon={<button type="button" onClick={() => setShowPassword(!showPassword)} className="pointer-events-auto rounded p-1 text-neutral-400 hover:text-primary-600" aria-label={showPassword ? t('Register.hidePassword') : t('Register.showPassword')}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>}
               {...register('password')}
               error={errors.password?.message}
             />
 
             <Button type="submit" variant="primary" className="w-full mt-4" isLoading={loading}>
               <UserPlus className="w-4 h-4" />
-              Daftar Sekarang
+              {t('Register.submit')}
             </Button>
           </form>
           ) : (
@@ -201,7 +203,7 @@ export default function RegisterPage() {
               }`}>
                 <div className="flex items-center gap-2">
                   <Clock className={`w-4 h-4 ${otpTimer > 0 ? 'animate-pulse' : ''}`} />
-                  <span>{otpTimer > 0 ? 'Masa berlaku kode OTP:' : 'Kode OTP telah kadaluarsa!'}</span>
+                  <span>{otpTimer > 0 ? t('Register.otpValid') : t('Register.otpExpired')}</span>
                 </div>
                 <span className="font-mono text-sm font-bold">{formatTime(otpTimer)}</span>
               </div>
@@ -212,8 +214,8 @@ export default function RegisterPage() {
                 </div>
               )}
               <Input
-                label="Kode Verifikasi (6 digit)"
-                placeholder="123456"
+                label={t('Register.otpCodeLabel')}
+                placeholder={t('Register.otpCodePlaceholder')}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 maxLength={6}
@@ -221,18 +223,18 @@ export default function RegisterPage() {
               />
               <Button type="button" variant="primary" className="w-full" isLoading={loading} onClick={onVerifyOtp} disabled={otpTimer === 0 || loading || code.length < 6}>
                 <Mail className="w-4 h-4" />
-                Verifikasi &amp; Aktifkan Akun
+                {t('Register.verifySubmit')}
               </Button>
               <Button type="button" variant="outline" className="w-full" onClick={onResendOtp} disabled={loading}>
-                Kirim Ulang Kode
+                {t('Register.resendSubmit')}
               </Button>
             </div>
           )}
 
           <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 text-center text-xs text-neutral-500 mt-6">
-            Sudah punya akun?{' '}
+            {t('Register.hasAccount')}{' '}
             <Link href="/login" className="font-bold text-primary-600 hover:underline">
-              Masuk di Sini
+              {t('Register.signIn')}
             </Link>
           </div>
         </Card>

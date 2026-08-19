@@ -128,6 +128,19 @@ type StatistikAgama struct {
 	Jumlah int    `json:"jumlah"`
 }
 
+type StatistikBulanan struct {
+	Bulan        int `json:"bulan"`
+	Lahir        int `json:"lahir"`
+	Meninggal    int `json:"meninggal"`
+	PindahMasuk  int `json:"pindahMasuk"`
+	PindahKeluar int `json:"pindahKeluar"`
+}
+
+type StatistikTrenBulanan struct {
+	Tahun int                `json:"tahun"`
+	Data  []StatistikBulanan `json:"data"`
+}
+
 type ApbdesRingkasan struct {
 	Tahun           int          `json:"tahun"`
 	Bulan           int          `json:"bulan,omitempty"`    // 1-12 jika difilter bulanan; 0 = tanpa filter periode
@@ -142,7 +155,7 @@ type ApbdesItem struct {
 	Tahun       int     `json:"tahun"`
 	Bulan       *int    `json:"bulan,omitempty"`    // periode bulanan (1-12); nil = bukan entri bulanan
 	Triwulan    *int    `json:"triwulan,omitempty"` // periode triwulanan (1-4); nil = bukan entri triwulanan
-	Kategori    string  `json:"kategori"` // 'pendapatan' | 'belanja'
+	Kategori    string  `json:"kategori"`           // 'pendapatan' | 'belanja'
 	SubKategori string  `json:"subKategori"`
 	Jumlah      float64 `json:"jumlah"`
 	Persentase  float64 `json:"persentase"`

@@ -2,16 +2,23 @@ package pengaduan
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
 	"desa-borong-api/internal/domain"
 	"desa-borong-api/internal/pkg/apputil"
+	"desa-borong-api/internal/usecase/notifikasi"
 )
 
-type Service struct{ repo Repository }
+type Service struct {
+	repo  Repository
+	notif *notifikasi.Service
+}
 
-func NewService(repo Repository) *Service { return &Service{repo: repo} }
+func NewService(repo Repository, notif *notifikasi.Service) *Service {
+	return &Service{repo: repo, notif: notif}
+}
 
 func (s *Service) Submit(ctx context.Context, pelapor domain.User, kategori, judul, deskripsi, lokasi string) (domain.Pengaduan, error) {
 	p := domain.Pengaduan{
@@ -28,8 +35,14 @@ func (s *Service) Submit(ctx context.Context, pelapor domain.User, kategori, jud
 	if v := strings.TrimSpace(lokasi); v != "" {
 		p.Lokasi = &v
 	}
-	if err := s.repo.Create(ctx, p); err != nil {
+		if err := s.repo.Create(ctx, p); err != nil {
 		return p, err
+	}
+	// Notify admins of new complaint submission.
+	if s.notif != nil {
+		_ = s.notif.BroadcastToAdmins(ctx, "Pengaduan Baru",
+			fmt.Sprintf("Pengaduan baru dari %s (resi: %s): \"%s\".", pelapor.Nama, p.NomorTiket, judul),
+			"/admin/pengaduan")
 	}
 	return p, nil
 }

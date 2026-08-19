@@ -3,6 +3,7 @@ package persuratan
 import (
 	"context"
 	"fmt"
+	"html"
 	"io"
 	"regexp"
 	"strings"
@@ -12,11 +13,11 @@ import (
 
 	"desa-borong-api/internal/domain"
 	"desa-borong-api/internal/pkg/apputil"
+	"desa-borong-api/internal/pkg/notif"
 	"desa-borong-api/pkg/pdfengine"
 	"desa-borong-api/pkg/security"
 	"desa-borong-api/pkg/templateengine"
 )
-
 
 // SubmittedFile is an uploaded attachment to attach to a pengajuan.
 type SubmittedFile struct {
@@ -33,17 +34,19 @@ type Service struct {
 	tx         TxManager
 	users      UserReader
 	mailer     EmailSender
+	wa         WhatsAppSender
 	appURL     string
 	hmacSecret string
+	perangkat  PerangkatReader
+	notifikasi NotifikasiRepository
+	deduper    *notif.Deduplicator
 }
 
 var submissionKey = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_-]{0,63}$`)
 
-func NewService(jenis JenisSuratRepository, pengajuan PengajuanRepository, penduduk PendudukRepository, storage FileStorage, tx TxManager, users UserReader, mailer EmailSender, appURL string, hmacSecret string) *Service {
-	return &Service{jenis: jenis, pengajuan: pengajuan, penduduk: penduduk, storage: storage, tx: tx, users: users, mailer: mailer, appURL: appURL, hmacSecret: hmacSecret}
+func NewService(jenis JenisSuratRepository, pengajuan PengajuanRepository, penduduk PendudukRepository, storage FileStorage, tx TxManager, users UserReader, mailer EmailSender, wa WhatsAppSender, appURL string, hmacSecret string, perangkat PerangkatReader, notifikasi NotifikasiRepository, deduper *notif.Deduplicator) *Service {
+	return &Service{jenis: jenis, pengajuan: pengajuan, penduduk: penduduk, storage: storage, tx: tx, users: users, mailer: mailer, wa: wa, appURL: appURL, hmacSecret: hmacSecret, perangkat: perangkat, notifikasi: notifikasi, deduper: deduper}
 }
-
-
 
 // ---- Jenis Surat (layanan) ----
 
@@ -211,7 +214,6 @@ func (s *Service) GetPendudukByNIK(ctx context.Context, nik string) (domain.Pend
 	return s.penduduk.GetByNIK(ctx, strings.TrimSpace(nik))
 }
 
-
 // OpenLampiran authorizes access to a personal attachment before opening it.
 func (s *Service) OpenLampiran(ctx context.Context, pengajuanID, lampiranID, viewerID string, isAdmin bool) (io.ReadCloser, domain.LampiranFile, error) {
 	pengajuan, err := s.pengajuan.GetByID(ctx, pengajuanID)
@@ -263,10 +265,47 @@ func (s *Service) ChangeStatus(ctx context.Context, id string, next domain.Statu
 		if err := s.pengajuan.AddRiwayat(txCtx, id, history); err != nil {
 			return err
 		}
+		if s.deduper.ShouldSend(cur.PemohonID, notif.TypeInfo, cur.ID) {
+			title, msg := notif.BuildStatusUpdate(cur.JenisSuratNama, string(next))
+			_ = s.notifikasi.Create(txCtx, domain.Notifikasi{
+				UserID:  cur.PemohonID,
+				Title:   title,
+				Message: msg,
+				Type:    notif.TypeInfo,
+			})
+		}
 		updated, err = s.pengajuan.GetByID(txCtx, id)
 		return err
 	})
+	if err == nil && updated.Status != "" && updated.Status != domain.PengajuanDiajukan {
+		s.notifyStatusToUser(ctx, updated)
+	}
 	return updated, err
+}
+
+// notifyStatusToUser mengirim notifikasi email + WhatsApp kepada pemohon saat
+// status pengajuan berubah. Pengiriman best-effort (async via job queue).
+func (s *Service) notifyStatusToUser(ctx context.Context, p domain.PengajuanSurat) {
+	user, err := s.users.GetByID(ctx, p.PemohonID)
+	if err != nil {
+		slog.Warn("failed to fetch user for status notification", "error", err, "pemohonID", p.PemohonID)
+		return
+	}
+	if email := strings.TrimSpace(user.Email); email != "" {
+		subject := "Status Surat " + p.JenisSuratNama + " - Desa Borong"
+		html := fmt.Sprintf(`<!doctype html><html><body style="font-family:Arial,sans-serif;background:#f3f4f6;margin:0;padding:24px"><div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;padding:28px"><h2 style="color:#0f172a;margin:0 0 12px">Pembaruan Status Surat</h2><p style="color:#334155">Halo <strong>%s</strong>,</p><p style="color:#334155">Status surat <strong>%s</strong> (Resi: %s) kini: <strong>%s</strong>.</p><p><a href="%s/layanan/lacak?resi=%s" style="display:inline-block;background:#0f4c81;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">Lacak Pengajuan</a></p></div></body></html>`, p.PemohonNama, p.JenisSuratNama, p.NomorResi, p.Status, s.appURL, p.NomorResi)
+		if eerr := s.mailer.Send(ctx, email, subject, html); eerr != nil {
+			slog.Error("failed to send status notification email", "error", eerr, "pemohonID", p.PemohonID)
+		}
+	}
+	if user.Telepon != nil {
+		if phone := normalizeWhatsAppNumber(*user.Telepon); phone != "" {
+			waText := fmt.Sprintf("Halo %s, status surat %s (Resi: %s) kini: %s. Buka di: %s/layanan/lacak?resi=%s", p.PemohonNama, p.JenisSuratNama, p.NomorResi, p.Status, s.appURL, p.NomorResi)
+			if werr := s.wa.Send(ctx, phone, waText); werr != nil {
+				slog.Error("failed to send status notification whatsapp", "error", werr, "pemohonID", p.PemohonID)
+			}
+		}
+	}
 }
 
 func (s *Service) DeletePengajuan(ctx context.Context, id string) error {
@@ -294,6 +333,22 @@ func romanMonth(m time.Month) string {
 	return "I"
 }
 
+func (s *Service) GetKepalaDesa(ctx context.Context) (domain.PerangkatDesa, error) {
+	if s.perangkat == nil {
+		return domain.PerangkatDesa{}, fmt.Errorf("perangkat reader not configured")
+	}
+	items, err := s.perangkat.List(ctx)
+	if err != nil {
+		return domain.PerangkatDesa{}, err
+	}
+	for _, p := range items {
+		if strings.EqualFold(p.Jabatan, "Kepala Desa") {
+			return p, nil
+		}
+	}
+	return domain.PerangkatDesa{}, fmt.Errorf("kepala desa not found")
+}
+
 // Publish sets a 'diproses' pengajuan to 'selesai', renders dynamic PDF template, and attaches HMAC security token
 func (s *Service) Publish(ctx context.Context, id, nomorSuratInput, catatan, changedBy string) (domain.PengajuanSurat, error) {
 	var updated domain.PengajuanSurat
@@ -314,6 +369,21 @@ func (s *Service) Publish(ctx context.Context, id, nomorSuratInput, catatan, cha
 		// Generate HMAC-SHA256 Digital Verification Token
 		qrCode := security.GenerateDocumentHash(s.hmacSecret, nomorSurat, cur.PemohonNama, cur.NomorResi, now.Format("2006-01-02"))
 
+		kepalaDesa := domain.PerangkatDesa{}
+		if s.perangkat != nil {
+			kd, kerr := s.GetKepalaDesa(txCtx)
+			if kerr == nil {
+				kepalaDesa = kd
+			}
+		}
+		ttdNama := kepalaDesa.Nama
+		ttdNip := ""
+		if kepalaDesa.NIP != nil {
+			ttdNip = *kepalaDesa.NIP
+		}
+		if ttdNama == "" {
+			ttdNama = "Kepala Desa Borong"
+		}
 
 		// Prepare render context for dynamic HTML template
 		jenis, _ := s.jenis.GetByKode(txCtx, cur.JenisSuratKode)
@@ -321,7 +391,7 @@ func (s *Service) Publish(ctx context.Context, id, nomorSuratInput, catatan, cha
 		if jenis.TemplateHTML != nil && *jenis.TemplateHTML != "" {
 			tplHTML = *jenis.TemplateHTML
 		} else {
-			tplHTML = fmt.Sprintf("<div><h2>PEMERINTAH DESA BORONG</h2><h3>%s</h3><p>Nomor: %s</p><p>Menerangkan bahwa: <strong>%s</strong></p><p>Surat diterbitkan secara resmi melalui Sistem Persuratan Digital Desa Borong.</p></div>", cur.JenisSuratNama, nomorSurat, cur.PemohonNama)
+			tplHTML = fmt.Sprintf("<div><h2>PEMERINTAH DESA BORONG</h2><h3>%s</h3><p>Nomor: %s</p><p>Menerangkan bahwa: <strong>%s</strong></p><p>Surat diterbitkan secara resmi melalui Sistem Persuratan Digital Desa Borong.</p></div>", html.EscapeString(cur.JenisSuratNama), html.EscapeString(nomorSurat), html.EscapeString(cur.PemohonNama))
 		}
 
 		renderCtx := templateengine.RenderContext{
@@ -338,8 +408,8 @@ func (s *Service) Publish(ctx context.Context, id, nomorSuratInput, catatan, cha
 				"kabupaten": "Bone",
 			},
 			TTD: map[string]string{
-				"nama": "H. Muhammad Rusli, S.Sos.",
-				"nip":  "19780412 200501 1 004",
+				"nama": ttdNama,
+				"nip":  ttdNip,
 			},
 			Meta: map[string]string{
 				"nomor_surat":   nomorSurat,
@@ -377,6 +447,15 @@ func (s *Service) Publish(ctx context.Context, id, nomorSuratInput, catatan, cha
 		if err := s.pengajuan.AddRiwayat(txCtx, id, history); err != nil {
 			return err
 		}
+		if s.deduper.ShouldSend(cur.PemohonID, notif.TypeSuccess, cur.ID) {
+			title, msg := notif.BuildSuratSelesai(cur.JenisSuratNama)
+			_ = s.notifikasi.Create(txCtx, domain.Notifikasi{
+				UserID:  cur.PemohonID,
+				Title:   title,
+				Message: msg,
+				Type:    notif.TypeSuccess,
+			})
+		}
 		updated, err = s.pengajuan.GetByID(txCtx, id)
 		return err
 	})
@@ -386,21 +465,55 @@ func (s *Service) Publish(ctx context.Context, id, nomorSuratInput, catatan, cha
 	if updated.DokumenHasil != nil || updated.Status == domain.PengajuanSelesai {
 		user, uerr := s.users.GetByID(ctx, updated.PemohonID)
 		if uerr != nil {
-			slog.Warn("failed to fetch user for completion email", "error", uerr, "pemohonID", updated.PemohonID)
-		} else if strings.TrimSpace(user.Email) == "" {
-			slog.Warn("user has no email address configured in database, email skipped", "pemohonID", updated.PemohonID, "pemohonNama", updated.PemohonNama)
+			slog.Warn("failed to fetch user for completion notification", "error", uerr, "pemohonID", updated.PemohonID)
 		} else {
-			slog.Info("attempting to send completion email to user", "email", user.Email, "pengajuanID", updated.ID)
-			if eerr := s.mailer.Send(ctx, user.Email, "Surat Selesai - Desa Borong: "+updated.JenisSuratNama, letterDoneHTML(updated, s.appURL)); eerr != nil {
-				slog.Error("failed to send surat notification email via Brevo", "error", eerr, "recipientEmail", user.Email, "pengajuanID", updated.ID)
+			// Notifikasi email (Brevo/noop).
+			if email := strings.TrimSpace(user.Email); email != "" {
+				slog.Info("attempting to send completion email to user", "email", email, "pengajuanID", updated.ID)
+				if eerr := s.mailer.Send(ctx, email, "Surat Selesai - Desa Borong: "+updated.JenisSuratNama, letterDoneHTML(updated, s.appURL)); eerr != nil {
+					slog.Error("failed to send surat notification email", "error", eerr, "recipientEmail", email, "pengajuanID", updated.ID)
+				} else {
+					slog.Info("surat notification email sent successfully", "recipientEmail", email, "pengajuanID", updated.ID)
+				}
 			} else {
-				slog.Info("surat notification email sent successfully", "recipientEmail", user.Email, "pengajuanID", updated.ID)
+				slog.Warn("user has no email address, email skipped", "pemohonID", updated.PemohonID, "pemohonNama", updated.PemohonNama)
+			}
+			// Notifikasi WhatsApp (FlowKirim/noop).
+			if user.Telepon != nil {
+				if phone := normalizeWhatsAppNumber(*user.Telepon); phone != "" {
+					waText := fmt.Sprintf("Halo %s, surat %s (Resi: %s) telah selesai diterbitkan Kantor Desa Borong. Buka di: %s/surat/%s", updated.PemohonNama, updated.JenisSuratNama, updated.NomorResi, s.appURL, updated.NomorResi)
+					if werr := s.wa.Send(ctx, phone, waText); werr != nil {
+						slog.Error("failed to send surat notification whatsapp via FlowKirim", "error", werr, "recipient", phone, "pengajuanID", updated.ID)
+					} else {
+						slog.Info("surat notification whatsapp sent", "recipient", phone, "pengajuanID", updated.ID)
+					}
+				}
 			}
 		}
 	}
 	return updated, nil
 }
 
+// normalizeWhatsAppNumber mengubah nomor telepon Indonesia (0812..., +62812..., 812...)
+// menjadi format internasional 62xxxxxxxxxx yang dipakai API WhatsApp gateway.
+func normalizeWhatsAppNumber(raw string) string {
+	digits := strings.Map(func(r rune) rune {
+		if r >= '0' && r <= '9' {
+			return r
+		}
+		return -1
+	}, raw)
+	switch {
+	case strings.HasPrefix(digits, "0"):
+		return "62" + digits[1:]
+	case strings.HasPrefix(digits, "62"):
+		return digits
+	case strings.HasPrefix(digits, "8"):
+		return "62" + digits
+	default:
+		return digits
+	}
+}
 
 // letterDoneHTML builds the HTML body for the "letter finished" email sent to
 // the applicant when a surat is published. It points to the formal surat page

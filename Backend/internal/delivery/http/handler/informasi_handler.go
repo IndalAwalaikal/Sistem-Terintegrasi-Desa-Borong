@@ -25,6 +25,17 @@ func (h *Handler) StatistikGet(w http.ResponseWriter, r *http.Request) {
 	httpapi.JSON(w, 200, s.Data)
 }
 
+// StatistikTrenGet serves the monthly birth/death/move trend for the chart.
+func (h *Handler) StatistikTrenGet(w http.ResponseWriter, r *http.Request) {
+	tahun, _ := strconv.Atoi(r.URL.Query().Get("tahun"))
+	tren, err := h.app.Finance.GetTrenBulanan(r.Context(), tahun)
+	if err != nil {
+		httpapi.Error(w, err)
+		return
+	}
+	httpapi.JSON(w, 200, tren)
+}
+
 func (h *Handler) StatistikUpdate(w http.ResponseWriter, r *http.Request) {
 	var patch map[string]json.RawMessage
 	if decode(r, &patch) != nil {
@@ -95,6 +106,31 @@ func (h *Handler) StatistikUpdate(w http.ResponseWriter, r *http.Request) {
 	httpapi.JSON(w, 200, updated.Data)
 }
 
+func (h *Handler) StatistikTrenUpdate(w http.ResponseWriter, r *http.Request) {
+	var v struct {
+		Tahun int                       `json:"tahun"`
+		Data  []domain.StatistikBulanan `json:"data"`
+	}
+	if decode(r, &v) != nil || v.Tahun < 1 {
+		httpapi.Error(w, domain.ErrValidation)
+		return
+	}
+	if err := h.app.Finance.UpdateTrenBulanan(r.Context(), v.Tahun, v.Data); err != nil {
+		httpapi.Error(w, err)
+		return
+	}
+	updated, err := h.app.Finance.GetTrenBulanan(r.Context(), v.Tahun)
+	if err != nil {
+		httpapi.Error(w, err)
+		return
+	}
+	httpapi.JSON(w, 200, updated)
+}
+
+// StatistikTrenUpdate replaces the monthly demographic trend for a year.
+// Body: { "tahun": 2025, "data": [ { "bulan":1, ... }, ... ] }
+
+// ApbdesGet returns the APBDes summary for a given year/period.
 func (h *Handler) ApbdesGet(w http.ResponseWriter, r *http.Request) {
 	tahun, _ := strconv.Atoi(r.URL.Query().Get("tahun"))
 	bulan, _ := strconv.Atoi(r.URL.Query().Get("bulan"))
@@ -109,10 +145,10 @@ func (h *Handler) ApbdesGet(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ApbdesUpdate(w http.ResponseWriter, r *http.Request) {
 	var v struct {
-		Tahun    int `json:"tahun"`
+		Tahun    int  `json:"tahun"`
 		Bulan    *int `json:"bulan"`
 		Triwulan *int `json:"triwulan"`
-		Items []struct {
+		Items    []struct {
 			Kategori    string  `json:"kategori"`
 			SubKategori string  `json:"subKategori"`
 			Jumlah      float64 `json:"jumlah"`

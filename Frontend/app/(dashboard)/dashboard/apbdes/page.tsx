@@ -21,7 +21,7 @@ interface ApbdesRow {
 }
 
 export default function DashboardApbdesPage() {
-  const [apbdes, setApbdes] = useState<ApbdesRingkasan | null>(null);
+  const [, setApbdes] = useState<ApbdesRingkasan | null>(null);
   const [rows, setRows] = useState<ApbdesRow[]>([]);
   const [tahun, setTahun] = useState<number>(getCurrentYear());
   const [periodeTipe, setPeriodeTipe] = useState<'tahunan' | 'bulan' | 'triwulan'>('tahunan');
@@ -35,7 +35,9 @@ export default function DashboardApbdesPage() {
 
   useEffect(() => {
     let active = true;
-    getApbdes(tahun, periode())
+    const p: { bulan?: number; triwulan?: number } =
+      periodeTipe === 'bulan' ? { bulan } : periodeTipe === 'triwulan' ? { triwulan } : {};
+    getApbdes(tahun, p)
       .then((a) => {
         if (!active) return;
         setApbdes(a);
@@ -84,8 +86,8 @@ export default function DashboardApbdesPage() {
 <div className="space-y-6">
       <div className="flex flex-wrap items-end gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-white">Kelola Data APBDes</h1>
-          <p className="text-xs text-neutral-400 mt-1">
+          <h1 className="text-2xl font-extrabold text-neutral-900 dark:text-white">Kelola Data APBDes</h1>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
             Input transparansi anggaran per tahun, per akhir bulan, atau per triwulan. Perubahan langsung tampil di
             halaman Transparansi Anggaran publik.
           </p>
@@ -132,14 +134,14 @@ export default function DashboardApbdesPage() {
         )}
       </div>
 
-      <Card className="p-6 bg-neutral-900 border-neutral-800">
+      <Card className="p-6 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="flex items-center gap-2 font-bold text-white text-base">
-            <Wallet className="h-5 w-5 text-emerald-400" /> Rincian APBDes — {periodeLabel} {tahun}
+          <h3 className="flex items-center gap-2 font-bold text-neutral-900 dark:text-white text-base">
+            <Wallet className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /> Rincian APBDes — {periodeLabel} {tahun}
           </h3>
           <div className="flex gap-4 text-[11px]">
-            <span>Pendapatan: <b className="text-emerald-300">{formatRupiah(pendapatanTotal)}</b></span>
-            <span>Belanja: <b className="text-blue-300">{formatRupiah(belanjaTotal)}</b></span>
+            <span>Pendapatan: <b className="text-emerald-600 dark:text-emerald-300">{formatRupiah(pendapatanTotal)}</b></span>
+            <span>Belanja: <b className="text-blue-600 dark:text-blue-300">{formatRupiah(belanjaTotal)}</b></span>
           </div>
         </div>
 
@@ -147,28 +149,28 @@ export default function DashboardApbdesPage() {
           {(['pendapatan', 'belanja'] as const).map((kategori) => (
             <div key={kategori} className="space-y-2">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-300">{kategori}</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-300">{kategori}</h4>
                 <Button variant="ghost" size="sm" onClick={() => addRow(kategori)}>
                   <Plus className="w-4 h-4" /> Tambah
                 </Button>
               </div>
-              <div className="overflow-hidden rounded-xl border border-neutral-800">
+              <div className="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-neutral-800 text-neutral-200 border-b border-neutral-700">
+                  <thead className="bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-200 border-b border-neutral-200 dark:border-neutral-700">
                     <tr>
                       <th className="p-3">Sub Kategori</th>
                       <th className="p-3 w-44">Jumlah (Rp)</th>
                       <th className="p-3 w-12"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-800">
+                  <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
 {rows.filter((r) => r.kategori === kategori).map((r) => (
                       <tr key={r.key}>
                         <td className="p-2">
-                          <Input aria-label="Nama sub kategori" value={r.subKategori} onChange={(e) => updateRow(r.key, 'subKategori', e.target.value)} className="border-neutral-700 bg-neutral-800" />
+                          <Input aria-label="Nama sub kategori" value={r.subKategori} onChange={(e) => updateRow(r.key, 'subKategori', e.target.value)} className="border-neutral-300 bg-white dark:border-neutral-700 dark:bg-neutral-800" />
                         </td>
                         <td className="p-2">
-                          <Input aria-label="Jumlah" type="number" value={r.jumlah} onChange={(e) => updateRow(r.key, 'jumlah', Number(e.target.value))} className="border-neutral-700 bg-neutral-800" />
+                          <Input aria-label="Jumlah" type="number" value={r.jumlah} onChange={(e) => updateRow(r.key, 'jumlah', Number(e.target.value))} className="border-neutral-300 bg-white dark:border-neutral-700 dark:bg-neutral-800" />
                         </td>
                         <td className="p-2 text-center">
                           <button onClick={() => removeRow(r.key)} aria-label="Hapus baris" className="text-rose-500 hover:text-rose-400">
@@ -194,7 +196,7 @@ export default function DashboardApbdesPage() {
             <Save className="h-4 w-4" /> Simpan APBDes
           </Button>
           {saved && (
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="h-4 w-4" /> Tersimpan
             </span>
           )}

@@ -7,6 +7,7 @@ import { getBeritaList } from '@/lib/services/berita.service';
 import { getUmkmList } from '@/lib/services/umkm.service';
 import { getJenisSuratList } from '@/lib/services/persuratan.service';
 import { Card } from '@/components/ui/Card';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
@@ -147,13 +148,13 @@ function CariContent() {
             <p className="font-bold text-neutral-700 dark:text-neutral-300">
               Mulai mengetik di atas untuk mencari.
             </p>
-            <p>Coba: "kopi", "SKTM", "gotong royong", atau nama UMKM.</p>
+            <p>Coba: &quot;kopi&quot;, &quot;SKTM&quot;, &quot;gotong royong&quot;, atau nama UMKM.</p>
           </Card>
         ) : total === 0 ? (
           <Card className="p-10 text-center text-sm text-neutral-500 space-y-2">
             <p className="text-2xl">🤔</p>
             <p className="font-bold text-neutral-700 dark:text-neutral-300">
-              Tidak ada hasil untuk "{query}"
+              Tidak ada hasil untuk &quot;{query}&quot;
             </p>
             <p>Coba kata kunci lain atau perkecil lingkup pencarian Anda.</p>
           </Card>
@@ -222,8 +223,16 @@ export default function CariPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-[60vh] bg-neutral-50 dark:bg-neutral-950 py-12 text-center text-sm text-neutral-500">
-          Memuat pencarian...
+        <div className="min-h-[60vh] bg-neutral-50 dark:bg-neutral-950 py-12">
+          <div className="container-desa space-y-4">
+            <Skeleton className="h-10 w-72" />
+            <Skeleton className="h-6 w-96" />
+            <div className="grid gap-3">
+              <Skeleton className="h-20 w-full rounded-2xl" />
+              <Skeleton className="h-20 w-full rounded-2xl" />
+              <Skeleton className="h-20 w-full rounded-2xl" />
+            </div>
+          </div>
         </div>
       }
     >

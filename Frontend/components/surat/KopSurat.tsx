@@ -9,10 +9,11 @@ type KopProps = {
 function LogoEmblem() {
   return (
     <div className="shrink-0 flex items-center justify-center pr-2 sm:pr-4">
+      {/* eslint-disable-next-line @next/next/no-img-element -- logo untuk template cetak/PDF (next/image tidak cocok untuk print) */}
       <img
         src="/logo-bulukumba.png"
         alt="Logo Kabupaten Bulukumba"
-        className="h-20 sm:h-28 w-auto object-contain"
+        className="h-32 sm:h-40 w-auto object-contain"
       />
     </div>
   );
@@ -22,8 +23,10 @@ export default function KopSurat({ title }: KopProps) {
   return (
     <div className="kop-surat print-color font-serif">
       <div className="flex items-center justify-center gap-2 sm:gap-4 pb-1">
-        <LogoEmblem />
-        <div className="leading-snug text-center space-y-0.5">
+        <div className="w-32 shrink-0">
+          <LogoEmblem />
+        </div>
+        <div className="flex-1 leading-snug text-center space-y-0.5">
           <p className="text-xs sm:text-sm font-bold tracking-widest uppercase text-neutral-950">
             PEMERINTAH KABUPATEN BULUKUMBA
           </p>
@@ -34,13 +37,17 @@ export default function KopSurat({ title }: KopProps) {
             PEMERINTAH DESA BORONG
           </p>
           <p className="text-[11px] sm:text-xs text-neutral-900 leading-tight">
-            Alamat: Jl. Poros Borong–Herlang KM 3, Desa Borong, Kec. Herlang, Kab. Bulukumba, Kode Pos 92552
+            Alamat: Jl. Poros Borong–Herlang KM 3, Desa Borong
+          </p>
+          <p className="text-[11px] sm:text-xs text-neutral-900 leading-tight">
+            Kec. Herlang, Kab. Bulukumba, Kode Pos 92552
           </p>
           <p className="text-[10px] sm:text-[11px] text-neutral-800 font-sans italic">
             Email: desaborong.id@gmail.com | Website: https://desaborong.id
           </p>
           {title ? <p className="mt-1 text-xs sm:text-sm font-bold text-neutral-900 uppercase">{title}</p> : null}
         </div>
+        <div className="w-20 shrink-0 hidden sm:block" />
       </div>
 
       {/* Garis Pembatas Ganda Khas Surat Dinas */}

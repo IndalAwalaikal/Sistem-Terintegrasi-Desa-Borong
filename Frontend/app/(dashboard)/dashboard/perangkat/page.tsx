@@ -9,10 +9,13 @@ import {
 } from '@/lib/services/desa.service';
 import type { PerangkatDesa } from '@/types/desa';
 import { Card } from '@/components/ui/Card';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
-import { ShieldCheck, Plus, Edit, Trash2, Save, Search } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { DynamicImage } from '@/components/ui/DynamicImage';
+import { Plus, Edit, Trash2, Save, Search } from 'lucide-react';
 import { useToastStore } from '@/store/toastStore';
 import { JABATAN_OPTIONS, JABATAN_VALUES } from '@/lib/constants/jabatan';
 
@@ -46,7 +49,6 @@ export default function DashboardPerangkatPage() {
 
   useEffect(() => {
     void refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openAdd = () => {
@@ -103,14 +105,23 @@ export default function DashboardPerangkatPage() {
     }
   };
 
-  const handleDelete = async (item: PerangkatDesa) => {
-    if (!window.confirm(`Hapus perangkat "${item.nama}"?`)) return;
+  const [deleteTarget, setDeleteTarget] = useState<PerangkatDesa | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = (item: PerangkatDesa) => setDeleteTarget(item);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await deletePerangkatAdmin(item.id);
+      await deletePerangkatAdmin(deleteTarget.id);
       showSuccess('Perangkat desa berhasil dihapus.');
       await refresh();
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Gagal menghapus perangkat.');
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -144,7 +155,11 @@ export default function DashboardPerangkatPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-neutral-500">Memuat perangkat desa...</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <Skeleton className="h-24 w-full rounded-2xl" />
+          <Skeleton className="h-24 w-full rounded-2xl" />
+          <Skeleton className="h-24 w-full rounded-2xl" />
+        </div>
       ) : visible.length === 0 ? (
         <Card className="p-10 text-center text-sm text-neutral-500">
           {search ? 'Tidak ada perangkat sesuai pencarian.' : 'Belum ada perangkat desa.'}
@@ -153,6 +168,7 @@ export default function DashboardPerangkatPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {visible.map((item) => (
             <Card key={item.id} className="p-5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm flex items-center gap-4">
+              {/* eslint-disable-next-line @next/next/no-img-element -- foto URL eksternal pengguna */}
               <img
                 src={item.foto}
                 alt={item.foto ? `Foto ${item.nama}` : undefined}
@@ -236,13 +252,22 @@ export default function DashboardPerangkatPage() {
           </p>
           <Input label="URL Foto (opsional)" placeholder="https://..." value={form.foto} onChange={(e) => setForm({ ...form, foto: e.target.value })} helperText="Jika kosong, avatar otomatis dibuat dari nama." />
           {form.foto && (
-            <img src={form.foto} alt="" className="w-16 h-16 rounded-full object-cover ring-2 ring-neutral-700" onError={(e) => { (e.target as HTMLImageElement).src = 'https://ui-avatars.com/api/?name=A&size=64&background=16a34a&color=fff'; }} />
+          <DynamicImage src={form.foto} alt="" fallbackSrc="https://ui-avatars.com/api/?name=A&size=64&background=16a34a&color=fff" className="w-16 h-16 rounded-full object-cover ring-2 ring-neutral-700" />
           )}
           <Button type="submit" variant="primary" className="w-full" isLoading={saving}>
             <Save className="h-4 w-4" /> {editingId ? 'Simpan Perubahan' : 'Simpan Perangkat'}
           </Button>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Hapus Perangkat"
+        message={<>Yakin ingin menghapus perangkat <strong>&quot;{deleteTarget?.nama}&quot;</strong>? Tindakan ini tidak dapat dibatalkan.</>}
+        isLoading={deleting}
+        onConfirm={() => void handleConfirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

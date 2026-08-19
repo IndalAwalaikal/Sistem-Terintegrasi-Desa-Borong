@@ -1,5 +1,6 @@
 import React from 'react';
 import { getBeritaList } from '@/lib/services/berita.service';
+import type { KategoriBerita } from '@/types/berita';
 import { BeritaClient } from './BeritaClient';
 
 export const metadata = {
@@ -13,7 +14,7 @@ interface BeritaPageProps {
 
 export default async function BeritaPage({ searchParams }: BeritaPageProps) {
   const resolvedParams = await searchParams;
-  const kategori = resolvedParams.kategori as any;
+  const kategori = resolvedParams.kategori as KategoriBerita | undefined;
   const search = resolvedParams.search;
   const page = parseInt(resolvedParams.page || '1', 10);
 

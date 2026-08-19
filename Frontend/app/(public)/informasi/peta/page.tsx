@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { MapPin, Navigation, School, Building2, Hospital, Trees } from 'lucide-react';
-import { mockProfilDesa } from '@/lib/mock/desa.mock';
 
 export default function PetaPage() {
   const [kategori, setKategori] = useState('semua');
@@ -62,7 +61,7 @@ export default function PetaPage() {
               style={{ border: 0 }}
               loading="lazy"
               allowFullScreen
-              src="https://maps.google.com/maps?q=-5.25,120.30&z=14&output=embed"
+                            src="https://maps.google.com/maps?q=-2.954,119.860&z=14&output=embed"
             />
             <div className="absolute bottom-4 right-4 bg-neutral-950/80 backdrop-blur-md px-4 py-2 rounded-xl text-xs text-white flex items-center gap-2 border border-white/10 shadow-lg">
               <MapPin className="w-4 h-4 text-primary-400" />

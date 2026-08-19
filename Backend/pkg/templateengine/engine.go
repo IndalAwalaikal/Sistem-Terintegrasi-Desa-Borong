@@ -2,6 +2,7 @@ package templateengine
 
 import (
 	"fmt"
+	"html"
 	"regexp"
 	"strings"
 	"time"
@@ -19,7 +20,8 @@ type RenderContext struct {
 
 var varRegex = regexp.MustCompile(`\{\{\s*([a-zA-Z0-9_\.]+)\s*\}\}`)
 
-// RenderTemplate replaces {{placeholder}} variables in HTML template string with actual values
+// RenderTemplate replaces {{placeholder}} variables in HTML template string with actual values.
+// All user-supplied values are HTML-escaped to prevent XSS in generated documents.
 func RenderTemplate(templateHTML string, ctx RenderContext) string {
 	if templateHTML == "" {
 		return ""
@@ -37,7 +39,7 @@ func RenderTemplate(templateHTML string, ctx RenderContext) string {
 		if len(parts) < 2 {
 			// Direct form key fallback
 			if val, ok := ctx.Form[key]; ok {
-				return val
+				return html.EscapeString(val)
 			}
 			return ""
 		}
@@ -48,7 +50,7 @@ func RenderTemplate(templateHTML string, ctx RenderContext) string {
 		if prefix == "form" {
 			formKey := strings.Join(parts[1:], ".")
 			if val, ok := ctx.Form[formKey]; ok {
-				return val
+				return html.EscapeString(val)
 			}
 			return ""
 		}
@@ -58,31 +60,31 @@ func RenderTemplate(templateHTML string, ctx RenderContext) string {
 			case "pemohon":
 				if len(parts) >= 3 {
 					if val, ok := ctx.Pemohon[parts[2]]; ok {
-						return val
+						return html.EscapeString(val)
 					}
 				}
 			case "subjek":
 				if len(parts) >= 3 {
 					if val, ok := ctx.Subjek[parts[2]]; ok {
-						return val
+						return html.EscapeString(val)
 					}
 				}
 			case "desa":
 				if len(parts) >= 3 {
 					if val, ok := ctx.Desa[parts[2]]; ok {
-						return val
+						return html.EscapeString(val)
 					}
 				}
 			case "ttd":
 				if len(parts) >= 3 {
 					if val, ok := ctx.TTD[parts[2]]; ok {
-						return val
+						return html.EscapeString(val)
 					}
 				}
 			case "meta":
 				if len(parts) >= 3 {
 					if val, ok := ctx.Meta[parts[2]]; ok {
-						return val
+						return html.EscapeString(val)
 					}
 				}
 			}

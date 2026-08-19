@@ -9,15 +9,17 @@ import {
 } from '@/lib/services/berita.service';
 import type { Berita, KategoriBerita } from '@/types/berita';
 import { Card } from '@/components/ui/Card';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { formatTanggal } from '@/lib/utils/format';
 import { useToastStore } from '@/store/toastStore';
-import { Newspaper, Plus, Edit, Trash2, Eye, Save, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Save, Search } from 'lucide-react';
 
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80';
 
@@ -37,6 +39,7 @@ export default function DashboardBeritaPage() {
     ringkasan: '',
     konten: '',
     gambarSampul: DEFAULT_IMAGE,
+    gambarTengah: '',
     tags: '',
   });
 
@@ -54,12 +57,11 @@ export default function DashboardBeritaPage() {
 
   useEffect(() => {
     void refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openAdd = () => {
     setEditingId(null);
-    setForm({ judul: '', kategori: 'kegiatan', ringkasan: '', konten: '', gambarSampul: DEFAULT_IMAGE, tags: '' });
+    setForm({ judul: '', kategori: 'kegiatan', ringkasan: '', konten: '', gambarSampul: DEFAULT_IMAGE, gambarTengah: '', tags: '' });
     setModalOpen(true);
   };
 
@@ -71,6 +73,7 @@ export default function DashboardBeritaPage() {
       ringkasan: b.ringkasan,
       konten: b.konten,
       gambarSampul: b.gambarSampul || DEFAULT_IMAGE,
+      gambarTengah: b.gambarTengah || '',
       tags: b.tags?.join(', ') || '',
     });
     setModalOpen(true);
@@ -87,6 +90,7 @@ export default function DashboardBeritaPage() {
         ringkasan: form.ringkasan,
         konten: form.konten || form.ringkasan,
         gambarSampul: form.gambarSampul || DEFAULT_IMAGE,
+        gambarTengah: form.gambarTengah || undefined,
         tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
       };
       if (editingId) {
@@ -98,21 +102,30 @@ export default function DashboardBeritaPage() {
       }
       setModalOpen(false);
       await refresh();
-    } catch (err: any) {
-      showError(err.message || 'Gagal menyimpan berita.');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Gagal menyimpan berita.');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (item: Berita) => {
-    if (!confirm(`Hapus berita "${item.judul}"?`)) return;
+  const [deleteTarget, setDeleteTarget] = useState<Berita | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = (item: Berita) => setDeleteTarget(item);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await deleteBeritaAdmin(item.id);
+      await deleteBeritaAdmin(deleteTarget.id);
       showSuccess('Berita berhasil dihapus.');
       await refresh();
-    } catch (err: any) {
-      showError(err.message || 'Gagal menghapus berita.');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Gagal menghapus berita.');
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -150,7 +163,11 @@ export default function DashboardBeritaPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-neutral-500">Memuat berita...</p>
+        <div className="space-y-3">
+          <Skeleton className="h-20 w-full rounded-2xl" />
+          <Skeleton className="h-20 w-full rounded-2xl" />
+          <Skeleton className="h-20 w-full rounded-2xl" />
+        </div>
       ) : visible.length === 0 ? (
         <Card className="p-10 text-center text-sm text-neutral-500">Belum ada berita yang cocok.</Card>
       ) : (
@@ -243,6 +260,12 @@ export default function DashboardBeritaPage() {
               </div>
             </div>
           </div>
+          <Input
+            label="URL Gambar Tengah (Opsional)"
+            value={form.gambarTengah}
+            onChange={(e) => setForm({ ...form, gambarTengah: e.target.value })}
+            placeholder="https://... — tampil di tengah artikel"
+          />
           <Textarea
             label="Ringkasan Berita"
             value={form.ringkasan}
@@ -288,6 +311,15 @@ export default function DashboardBeritaPage() {
           </Button>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Hapus Berita"
+        message={<>Yakin ingin menghapus berita <strong>&quot;{deleteTarget?.judul}&quot;</strong>? Tindakan ini tidak dapat dibatalkan.</>}
+        isLoading={deleting}
+        onConfirm={() => void handleConfirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

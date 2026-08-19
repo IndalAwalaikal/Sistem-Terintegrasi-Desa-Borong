@@ -12,6 +12,10 @@ type StatistikRepository interface {
 	GetByTahun(ctx context.Context, tahun int) (domain.StatistikPenduduk, error)
 	GetLatest(ctx context.Context) (domain.StatistikPenduduk, error)
 	Upsert(ctx context.Context, s domain.StatistikPenduduk) error
+	GetTrenBulanan(ctx context.Context, tahun int) ([]domain.StatistikBulanan, error)
+	// UpsertTrenBulanan replaces every monthly row for the given year with the
+	// supplied set (caller supplies all 12 rows). Bulan must be 1..12.
+	UpsertTrenBulanan(ctx context.Context, tahun int, rows []domain.StatistikBulanan) error
 }
 
 // ApbdesRepository persists APBDes line items per periode (tahun/bulan/triwulan).

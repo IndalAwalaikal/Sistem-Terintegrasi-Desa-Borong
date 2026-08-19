@@ -23,6 +23,7 @@ import { lightTooltipRupiahProps } from '@/lib/utils/chartTooltip';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
 import { Reveal } from '@/components/ui/Reveal';
+import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 const COLORS = ['#16a34a', '#2563eb', '#f59e0b', '#dc2626', '#8b5cf6'];
@@ -187,65 +188,46 @@ export default function ApbdesPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {/* Filter Tahun */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 block">
-                  Tahun Anggaran:
-                </label>
-                <select
-                  value={selectedTahun}
-                  onChange={(e) => setSelectedTahun(Number(e.target.value))}
-                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 dark:bg-neutral-950 dark:border-neutral-800 px-3 py-2 text-xs font-bold text-neutral-900 dark:text-white outline-none focus:border-primary-500"
-                >
-                  {TAHUN_OPTIONS.map((th) => (
-                    <option key={th} value={th}>
-                      Tahun APBDes {th}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="Tahun Anggaran:"
+                value={selectedTahun}
+                onChange={(e) => setSelectedTahun(Number(e.target.value))}
+                options={TAHUN_OPTIONS.map((th) => ({ value: String(th), label: `Tahun APBDes ${th}` }))}
+                className="px-3 py-2 text-xs font-bold"
+              />
 
               {/* Filter Triwulan / Semester */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 block">
-                  Semester / Triwulan:
-                </label>
-                <select
-                  value={selectedPeriode}
-                  onChange={(e) => {
-                    setSelectedPeriode(e.target.value);
-                    if (e.target.value !== 'semua') setSelectedBulan('semua');
-                  }}
-                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 dark:bg-neutral-950 dark:border-neutral-800 px-3 py-2 text-xs font-bold text-neutral-900 dark:text-white outline-none focus:border-primary-500"
-                >
-                  <option value="semua">Setahun Penuh (12 Bulan)</option>
-                  <option value="q1">Triwulan 1 (Q1: Jan - Mar)</option>
-                  <option value="q2">Triwulan 2 (Q2: Apr - Jun)</option>
-                  <option value="q3">Triwulan 3 (Q3: Jul - Sep)</option>
-                  <option value="q4">Triwulan 4 (Q4: Okt - Des)</option>
-                </select>
-              </div>
+              <Select
+                label="Semester / Triwulan:"
+                value={selectedPeriode}
+                onChange={(e) => {
+                  setSelectedPeriode(e.target.value);
+                  if (e.target.value !== 'semua') setSelectedBulan('semua');
+                }}
+                options={[
+                  { value: 'semua', label: 'Setahun Penuh (12 Bulan)' },
+                  { value: 'q1', label: 'Triwulan 1 (Q1: Jan - Mar)' },
+                  { value: 'q2', label: 'Triwulan 2 (Q2: Apr - Jun)' },
+                  { value: 'q3', label: 'Triwulan 3 (Q3: Jul - Sep)' },
+                  { value: 'q4', label: 'Triwulan 4 (Q4: Okt - Des)' },
+                ]}
+                className="px-3 py-2 text-xs font-bold"
+              />
 
               {/* Filter Bulan */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 block">
-                  Bulan Realisasi:
-                </label>
-                <select
-                  value={selectedBulan}
-                  onChange={(e) => {
-                    setSelectedBulan(e.target.value);
-                    if (e.target.value !== 'semua') setSelectedPeriode('semua');
-                  }}
-                  className="w-full rounded-xl border border-neutral-200 bg-neutral-50 dark:bg-neutral-950 dark:border-neutral-800 px-3 py-2 text-xs font-bold text-neutral-900 dark:text-white outline-none focus:border-primary-500"
-                >
-                  <option value="semua">Semua Bulan</option>
-                  {BULAN_NAMES.map((bName, idx) => (
-                    <option key={idx} value={String(idx + 1)}>
-                      Bulan {bName}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="Bulan Realisasi:"
+                value={selectedBulan}
+                onChange={(e) => {
+                  setSelectedBulan(e.target.value);
+                  if (e.target.value !== 'semua') setSelectedPeriode('semua');
+                }}
+                options={[
+                  { value: 'semua', label: 'Semua Bulan' },
+                  ...BULAN_NAMES.map((bName, idx) => ({ value: String(idx + 1), label: `Bulan ${bName}` })),
+                ]}
+                className="px-3 py-2 text-xs font-bold"
+              />
 
               {/* Catatan: filter tanggal cut-off dihapus — data kini disimpan & disajikan per periode nyata (tahun/bulan/triwulan). */}
             </div>

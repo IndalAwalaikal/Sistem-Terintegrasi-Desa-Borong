@@ -3,8 +3,10 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -56,8 +58,15 @@ func digits(s string) bool {
 	return s != ""
 }
 
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+
 func validEmail(s string) bool {
-	return strings.Contains(s, "@") && strings.Contains(s, ".")
+	return emailRegex.MatchString(s)
+}
+
+// htmlEscape escapes HTML special characters to prevent XSS in rendered templates.
+func htmlEscape(s string) string {
+	return html.EscapeString(s)
 }
 
 // page parses pagination query params.

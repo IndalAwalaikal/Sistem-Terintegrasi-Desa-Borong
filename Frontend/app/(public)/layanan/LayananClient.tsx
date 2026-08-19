@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import type { JenisSurat } from '@/types/persuratan';
+import type { ProfilDesa } from '@/types/desa';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import {
@@ -19,6 +20,9 @@ import {
   CheckCircle2,
   ArrowRight,
   Clock,
+  Phone,
+  Mail,
+  MapPin,
 } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
@@ -35,9 +39,10 @@ const iconMap: Record<string, React.ReactNode> = {
 
 interface LayananClientProps {
   jenisSuratList: JenisSurat[];
+  profil: ProfilDesa;
 }
 
-export const LayananClient: React.FC<LayananClientProps> = ({ jenisSuratList }) => {
+export const LayananClient: React.FC<LayananClientProps> = ({ jenisSuratList, profil }) => {
   const { t } = useTranslation();
   const [search, setSearch] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState<string>('Semua');
@@ -126,6 +131,50 @@ export const LayananClient: React.FC<LayananClientProps> = ({ jenisSuratList }) 
             </Button>
           </Link>
         </div>
+
+        {/* Jam Layanan & Kontak Cepat */}
+        <Card className="p-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center gap-5 md:gap-8">
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary-600/10 text-primary-600 dark:text-primary-400">
+                <Clock className="h-6 w-6" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">
+                  Jam Layanan Kantor
+                </p>
+                <p className="text-sm sm:text-base font-extrabold text-neutral-900 dark:text-white">
+                  {profil.jamLayanan}
+                </p>
+              </div>
+            </div>
+
+            <div className="hidden md:block h-10 w-px bg-neutral-200 dark:bg-neutral-800" aria-hidden="true" />
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1 text-xs font-semibold">
+              <a
+                href={`tel:${profil.telepon}`}
+                className="flex items-center gap-2 text-neutral-700 dark:text-neutral-200 hover:text-primary-600 transition-colors"
+                aria-label={`Telepon kantor desa: ${profil.telepon}`}
+              >
+                <Phone className="w-4 h-4 text-primary-600 shrink-0" aria-hidden="true" />
+                <span className="truncate">{profil.telepon}</span>
+              </a>
+              <a
+                href={`mailto:${profil.email}`}
+                className="flex items-center gap-2 text-neutral-700 dark:text-neutral-200 hover:text-primary-600 transition-colors"
+                aria-label={`Email kantor desa: ${profil.email}`}
+              >
+                <Mail className="w-4 h-4 text-primary-600 shrink-0" aria-hidden="true" />
+                <span className="truncate">{profil.email}</span>
+              </a>
+              <span className="flex items-center gap-2 text-neutral-700 dark:text-neutral-200">
+                <MapPin className="w-4 h-4 text-primary-600 shrink-0" aria-hidden="true" />
+                <span className="truncate">{profil.alamatKantor}</span>
+              </span>
+            </div>
+          </div>
+        </Card>
 
         {/* Dynamic Grid 100+ Jenis Surat */}
         {filteredSurat.length === 0 ? (

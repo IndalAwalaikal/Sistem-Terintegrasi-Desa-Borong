@@ -5,7 +5,6 @@ import KopSurat from './KopSurat';
 import type { LampiranFile, PengajuanSurat } from '@/types/persuratan';
 import { getLampiranBlob, isLampiranImage } from '@/lib/services/persuratan.service';
 
-const KEPALA_DESA_NAMA = 'H. MUH. AMIN, S.Pd., M.M.';
 const BULAN_ROMAWI = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 const BULAN_INDONESIA = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -51,7 +50,7 @@ function fmtRupiah(val?: string | number): string {
   if (!val) return '-';
   const n = Number(String(val).replace(/\D/g, ''));
   if (isNaN(n)) return String(val);
-  return 'Rp ' + n.toLocaleString('id-ID');
+  return 'Rp. ' + n.toLocaleString('id-ID');
 }
 
 function FieldRow({ label, value }: { label: string; value?: string | number }) {
@@ -123,6 +122,7 @@ export default function SuratTemplate({ surat }: { surat: PengajuanSurat }) {
       cancelled = true;
       aktif.forEach((f) => URL.revokeObjectURL(f.url));
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- data surat diambil sekali; `surat?.id` sebagai kunci stabil
   }, [surat?.id]);
 
   if (!surat) return null;
@@ -204,25 +204,6 @@ export default function SuratTemplate({ surat }: { surat: PengajuanSurat }) {
               </tbody>
             </table>
           </div>
-
-          {/* Pas Foto calon pengantin / pemohon (surat nikah & sejenisnya) */}
-          {fotoPas.length > 0 && (
-            <div className="flex gap-3 justify-end shrink-0 pt-1">
-              {fotoPas.map((foto, i) => (
-                <figure key={i} className="text-center space-y-0.5">
-                  <img
-                    src={foto.url}
-                    alt={`Pas Foto ${i + 1}`}
-                    className="object-cover border border-neutral-500 rounded-[2px] bg-white"
-                    style={{ width: foto.w, height: foto.h }}
-                  />
-                  <figcaption className="text-[9px] text-neutral-700">
-                    Pas Foto {i + 1}
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
@@ -429,7 +410,7 @@ export default function SuratTemplate({ surat }: { surat: PengajuanSurat }) {
                       <FieldRow
                         key={k}
                         label={k.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
-                        value={String(v)}
+                        value={['penghasilan', 'biaya', 'uang'].some(item => k.toLowerCase().includes(item)) && !isNaN(Number(v)) ? 'Rp. ' + String(v) : String(v)}
                       />
                     ))}
                 </tbody>
@@ -450,9 +431,29 @@ export default function SuratTemplate({ surat }: { surat: PengajuanSurat }) {
         Demikian Surat Keterangan ini dibuat dengan sebenarnya dan diberikan kepada yang bersangkutan untuk dapat dipergunakan sebagaimana mestinya dan/atau sebagai kelengkapan berkas administrasi.
       </p>
 
-      {/* Blok Penandatangan Resmi */}
-      <div className="mt-8 sm:mt-12 flex justify-end font-serif">
-        <div className="text-center w-56 sm:w-72 md:w-80">
+      {/* Blok Penandatangan Resmi & Pas Foto */}
+      <div className={`mt-8 sm:mt-12 flex items-start ${fotoPas.length > 0 ? 'justify-between' : 'justify-end'} gap-6 font-serif`}>
+        {/* Pas Foto di sebelah kiri untuk surat nikah & sejenisnya */}
+        {fotoPas.length > 0 && (
+          <div className="flex gap-3 ml-8">
+            {fotoPas.map((foto, i) => (
+              <figure key={i} className="text-center space-y-0.5">
+                {/* eslint-disable-next-line @next/next/no-img-element -- pas foto untuk template cetak/PDF */}
+                <img
+                  src={foto.url}
+                  alt={`Pas Foto ${i + 1}`}
+                  className="object-cover border border-neutral-500 rounded-[2px] bg-white"
+                  style={{ width: foto.w, height: foto.h }}
+                />
+                <figcaption className="text-[9px] text-neutral-700">
+                  Pas Foto {i + 1}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        )}
+
+        <div className={`text-center w-56 sm:w-72 md:w-80 ${fotoPas.length === 0 ? 'ml-auto' : ''}`}>
           <p className="text-neutral-950 text-xs sm:text-sm">Diterbitkan di : Borong</p>
           <p className="text-neutral-950 text-xs sm:text-sm">Pada Tanggal &nbsp;: {tanggalTerbit}</p>
           <div className="border-b border-neutral-950 my-1 w-full" aria-hidden="true" />
@@ -461,9 +462,11 @@ export default function SuratTemplate({ surat }: { surat: PengajuanSurat }) {
             {/* Ruang Stempel Basah & Tanda Tangan */}
           </div>
           <p className="font-bold underline text-xs sm:text-base uppercase text-neutral-950 tracking-wide">
-            {KEPALA_DESA_NAMA}
+            {surat.penandatangan?.nama || 'Kepala Desa Borong'}
           </p>
-          <p className="text-[10px] sm:text-xs font-mono text-neutral-800 mt-0.5">NIP. ........................................</p>
+          <p className="text-[10px] sm:text-xs font-mono text-neutral-800 mt-0.5">
+            NIP. {surat.penandatangan?.nip || '........................................'}
+          </p>
         </div>
       </div>
     </div>

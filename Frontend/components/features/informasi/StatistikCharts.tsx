@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardHeader, CardBody } from '@/components/ui/Card';
-import { BarChart3, PieChart as PieChartIcon } from 'lucide-react';
+import { BarChart3, PieChart as PieChartIcon, TrendingUp } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -14,15 +14,20 @@ import {
   Pie,
   Cell,
   Legend,
+  LineChart,
+  Line,
 } from 'recharts';
 import { lightTooltipProps } from '@/lib/utils/chartTooltip';
 import { useTranslation } from '@/lib/i18n/useTranslation';
-import type { StatistikPenduduk } from '@/types/statistik';
+import type { StatistikPenduduk, TrenPenduduk } from '@/types/statistik';
 
 const COLORS = ['#16a34a', '#2563eb', '#f59e0b', '#dc2626', '#8b5cf6', '#ec4899', '#06b6d4'];
 
+const BULAN_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
 interface StatistikChartsProps {
   data: StatistikPenduduk;
+  tren?: TrenPenduduk;
 }
 
 /**
@@ -30,7 +35,7 @@ interface StatistikChartsProps {
  * { ssr:false }) sehingga pustaka chart berat tidak ikut bundle pada halaman
  * lain. Diterima sebagai Client Component dan tidak perlu data di SSR.
  */
-export const StatistikCharts: React.FC<StatistikChartsProps> = ({ data }) => {
+export const StatistikCharts: React.FC<StatistikChartsProps> = ({ data, tren }) => {
   const { t } = useTranslation();
   const genderData = [
     { name: t('Statistik.lakiLaki'), value: data.lakiLaki },
@@ -133,7 +138,7 @@ export const StatistikCharts: React.FC<StatistikChartsProps> = ({ data }) => {
         </Card>
       </div>
 
-      {/* Charts Row 3: Age Groups & Religion */}
+        {/* Charts Row 3: Age Groups & Religion */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Age Group Chart */}
         {data.perKelompokUsia && data.perKelompokUsia.length > 0 && (
@@ -187,6 +192,35 @@ export const StatistikCharts: React.FC<StatistikChartsProps> = ({ data }) => {
           </Card>
         )}
       </div>
+
+      {/* Charts Row 4: Tren Bulanan (line chart) — baris penuh */}
+      {tren && tren.data.length > 0 && (
+        <Card className="p-6">
+          <CardHeader className="px-0 pt-0 mb-4">
+            <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-emerald-600" />
+              {t('Statistik.trenBulanan', `Tren Kependudukan Bulanan — Tahun ${tren.tahun}`)}
+            </h3>
+          </CardHeader>
+          <CardBody className="px-0 h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={tren.data.map((d) => ({ ...d, label: BULAN_SHORT[d.bulan - 1] ?? String(d.bulan) }))}
+                margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+              >
+                <XAxis dataKey="label" stroke="#888888" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="#888888" fontSize={11} allowDecimals={false} tickLine={false} axisLine={false} />
+                <Tooltip {...lightTooltipProps} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Line type="monotone" dataKey="lahir" name={t('Statistik.trenLahir', 'Kelahiran')} stroke="#16a34a" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="meninggal" name={t('Statistik.trenMeninggal', 'Kematian')} stroke="#dc2626" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="pindahMasuk" name={t('Statistik.trenMasuk', 'Pindah Masuk')} stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="pindahKeluar" name={t('Statistik.trenKeluar', 'Pindah Keluar')} stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardBody>
+        </Card>
+      )}
     </React.Fragment>
   );
 };

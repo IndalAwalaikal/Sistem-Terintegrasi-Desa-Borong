@@ -51,7 +51,7 @@ export const ShareButtons: React.FC<ShareButtonsProps> = ({ title }) => {
   return (
     <div className="flex flex-wrap items-center gap-2 pt-6 border-t border-neutral-100 dark:border-neutral-800">
       <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-neutral-400 mr-1">
-        <Share2 className="h-4 w-4" />
+        <Share2 className="h-4 w-4" aria-hidden="true" />
         Bagikan:
       </span>
 
@@ -65,7 +65,7 @@ export const ShareButtons: React.FC<ShareButtonsProps> = ({ title }) => {
           title={label}
           className={`grid h-9 w-9 place-items-center rounded-xl transition-colors ${className}`}
         >
-          <Icon className="h-4 w-4" />
+          <Icon className="h-4 w-4" aria-hidden="true" />
         </a>
       ))}
 
@@ -75,7 +75,7 @@ export const ShareButtons: React.FC<ShareButtonsProps> = ({ title }) => {
         title={copied ? 'Tersalin!' : 'Salin tautan'}
         className="grid h-9 w-9 place-items-center rounded-xl bg-neutral-100 text-neutral-500 transition-colors hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
       >
-        {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Link2 className="h-4 w-4" />}
+        {copied ? <Check className="h-4 w-4 text-primary-600" aria-hidden="true" /> : <Link2 className="h-4 w-4" aria-hidden="true" />}
       </button>
     </div>
   );

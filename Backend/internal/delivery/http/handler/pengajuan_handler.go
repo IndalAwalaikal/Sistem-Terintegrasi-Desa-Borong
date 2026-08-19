@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -85,7 +86,7 @@ func (h *Handler) PengajuanCreate(w http.ResponseWriter, r *http.Request) {
 		httpapi.Error(w, err)
 		return
 	}
-	httpapi.JSON(w, 201, pengajuanResp(p))
+	httpapi.JSON(w, 201, h.pengajuanResp(r.Context(), p))
 }
 
 func (h *Handler) PengajuanGet(w http.ResponseWriter, r *http.Request) {
@@ -110,7 +111,7 @@ func (h *Handler) PengajuanGetSurat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if p.Status == domain.PengajuanSelesai {
-		httpapi.JSON(w, 200, pengajuanResp(p))
+		httpapi.JSON(w, 200, h.pengajuanResp(r.Context(), p))
 	} else {
 		httpapi.JSON(w, 200, pengajuanTrackingResp(p))
 	}
@@ -163,7 +164,7 @@ func (h *Handler) PengajuanSaya(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]map[string]any, 0, len(items))
 	for _, p := range items {
-		out = append(out, pengajuanResp(p))
+		out = append(out, h.pengajuanResp(r.Context(), p))
 	}
 	httpapi.JSON(w, 200, out)
 }
@@ -192,7 +193,7 @@ func (h *Handler) PengajuanList(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]map[string]any, 0, len(items))
 	for _, p := range items {
-		out = append(out, pengajuanResp(p))
+		out = append(out, h.pengajuanResp(r.Context(), p))
 	}
 	httpapi.JSON(w, 200, out)
 }
@@ -220,7 +221,7 @@ func (h *Handler) PengajuanStatus(w http.ResponseWriter, r *http.Request) {
 		httpapi.Error(w, err)
 		return
 	}
-	httpapi.JSON(w, 200, pengajuanResp(p))
+	httpapi.JSON(w, 200, h.pengajuanResp(r.Context(), p))
 }
 
 func (h *Handler) PengajuanPublish(w http.ResponseWriter, r *http.Request) {
@@ -234,7 +235,7 @@ func (h *Handler) PengajuanPublish(w http.ResponseWriter, r *http.Request) {
 		httpapi.Error(w, err)
 		return
 	}
-	httpapi.JSON(w, 200, pengajuanResp(p))
+	httpapi.JSON(w, 200, h.pengajuanResp(r.Context(), p))
 }
 
 func (h *Handler) PengajuanDelete(w http.ResponseWriter, r *http.Request) {
@@ -264,6 +265,10 @@ func (h *Handler) PengajuanBukuAgenda(w http.ResponseWriter, r *http.Request) {
 		if nik == "" && p.SubjekNIK != nil {
 			nik = *p.SubjekNIK
 		}
+		qrCode := ""
+		if p.QRVerificationCode != nil {
+			qrCode = *p.QRVerificationCode
+		}
 		agenda = append(agenda, map[string]any{
 			"noUrut":          idx + 1,
 			"id":              p.ID,
@@ -276,14 +281,14 @@ func (h *Handler) PengajuanBukuAgenda(w http.ResponseWriter, r *http.Request) {
 			"tanggalTerbit":   p.UpdatedAt.Format("02/01/2006"),
 			"penandatangan":   "Kepala Desa Borong",
 			"filePdfUrl":      p.FilePDFURL,
-			"qrCode":          p.QRVerificationCode,
+			"qrCode":          qrCode,
 		})
 	}
 	httpapi.JSON(w, 200, agenda)
 }
 
 
-func pengajuanResp(p domain.PengajuanSurat) map[string]any {
+func (h *Handler) pengajuanResp(ctx context.Context, p domain.PengajuanSurat) map[string]any {
 	lamp := make([]map[string]any, 0, len(p.Lampiran))
 	for _, l := range p.Lampiran {
 		lamp = append(lamp, map[string]any{
@@ -321,12 +326,27 @@ func pengajuanResp(p domain.PengajuanSurat) map[string]any {
 	if p.CatatanAdmin != nil {
 		resp["catatanAdmin"] = *p.CatatanAdmin
 	}
+	if p.NomorSuratResmi != nil {
+		resp["nomorSuratResmi"] = *p.NomorSuratResmi
+	}
+	if p.FilePDFURL != nil {
+		resp["filePdfUrl"] = *p.FilePDFURL
+	}
+	if p.QRVerificationCode != nil {
+		resp["qrVerificationCode"] = *p.QRVerificationCode
+	}
 	if p.DokumenHasil != nil {
 		d := p.DokumenHasil
 		resp["dokumenHasil"] = map[string]any{
 			"nama": d.Nama, "url": d.URL, "nomorSurat": d.NomorSurat,
 			"diterbitkanOleh": d.DiterbitkanOleh,
 			"diterbitkanPada": d.DiterbitkanPada.Format(time.RFC3339),
+		}
+	}
+	if kd, kerr := h.app.Persuratan.GetKepalaDesa(ctx); kerr == nil {
+		resp["penandatangan"] = map[string]any{
+			"nama": kd.Nama,
+			"nip":  kd.NIP,
 		}
 	}
 	return resp

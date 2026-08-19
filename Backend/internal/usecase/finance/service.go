@@ -27,6 +27,39 @@ func (s *Service) GetStatistik(ctx context.Context, tahun int) (domain.Statistik
 	return s.statistik.GetLatest(ctx)
 }
 
+// UpdateTrenBulanan validates and persists the per-month demographic trend for a
+// year using replace semantics (caller supplies all 12 months).
+// Bulan must be in 1..12 and unique; all counters must be non-negative.
+func (s *Service) UpdateTrenBulanan(ctx context.Context, tahun int, rows []domain.StatistikBulanan) error {
+	if tahun < 1 {
+		tahun = time.Now().Year()
+	}
+	seen := make(map[int]bool, len(rows))
+	for _, b := range rows {
+		if b.Bulan < 1 || b.Bulan > 12 || seen[b.Bulan] {
+			return domain.ErrValidation
+		}
+		if b.Lahir < 0 || b.Meninggal < 0 || b.PindahMasuk < 0 || b.PindahKeluar < 0 {
+			return domain.ErrValidation
+		}
+		seen[b.Bulan] = true
+	}
+	return s.statistik.UpsertTrenBulanan(ctx, tahun, rows)
+}
+func (s *Service) GetTrenBulanan(ctx context.Context, tahun int) (domain.StatistikTrenBulanan, error) {
+	if tahun < 1 {
+		tahun = time.Now().Year()
+	}
+	data, err := s.statistik.GetTrenBulanan(ctx, tahun)
+	if err != nil {
+		return domain.StatistikTrenBulanan{}, err
+	}
+	if data == nil {
+		data = []domain.StatistikBulanan{}
+	}
+	return domain.StatistikTrenBulanan{Tahun: tahun, Data: data}, nil
+}
+
 func (s *Service) UpdateStatistik(ctx context.Context, st domain.StatistikPenduduk) (domain.StatistikPenduduk, error) {
 	st.Tahun = int(st.Data.Tahun)
 	if st.Tahun == 0 {

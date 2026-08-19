@@ -24,4 +24,7 @@ type Repository interface {
 	Update(ctx context.Context, b domain.Berita) error
 	Delete(ctx context.Context, id string) error
 	IncrementRead(ctx context.Context, id string) error
+	ListKomentar(ctx context.Context, beritaID string) ([]domain.BeritaKomentar, error)
+	CreateKomentar(ctx context.Context, k domain.BeritaKomentar) error
+	DeleteKomentar(ctx context.Context, id string, userID *string) error
 }

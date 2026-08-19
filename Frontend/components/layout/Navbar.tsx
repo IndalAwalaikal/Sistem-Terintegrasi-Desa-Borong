@@ -17,6 +17,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useUiStore } from "@/store/uiStore";
 import { Button } from "@/components/ui/Button";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
 const logoBulukumba = "/logo-bulukumba.webp";
@@ -52,7 +53,7 @@ const menuConfig: NavMenuItem[] = [
         href: "/informasi/statistik",
       },
       { i18nKey: "Navbar.menuInformationApbdes", href: "/informasi/apbdes" },
-      { label: "Transparansi Pajak Desa", href: "/informasi/pajak" },
+      { i18nKey: "Navbar.menuInformationPajak", href: "/informasi/pajak" },
       { i18nKey: "Navbar.menuInformationPeta", href: "/informasi/peta" },
       { i18nKey: "Navbar.menuInformationAgenda", href: "/informasi/agenda" },
       {
@@ -89,6 +90,7 @@ export const Navbar: React.FC = () => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -97,20 +99,45 @@ export const Navbar: React.FC = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    setOpen(false);
+    setOpenMenu(null);
+  }, [pathname]);
+
+  // Tutup dropdown desktop saat klik di luar menu atau tekan Escape
+  useEffect(() => {
+    if (!openMenu) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenMenu(null);
+    };
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && !target.closest("[data-nav-dropdown]")) {
+        setOpenMenu(null);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("click", handleClickOutside);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [openMenu]);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
     <>
-      <div className="hidden border-b border-white/10 bg-[#061a3a] text-blue-100 md:block">
+      {/* Info bar (portal info + jam kantor) juga melekat agar seluruh
+          region header tetap terlihat saat discroll. */}
+      <div className="sticky top-0 z-50 hidden border-b border-white/10 bg-[#061a3a] text-blue-100 md:block print:hidden">
         <div className="container-desa flex h-9 items-center justify-between text-[11px] font-medium tracking-wide">
           <div className="flex items-center gap-3">
             <p>{t("Navbar.portalInfo")}</p>
             <span>•</span>
             <a
-              href="https://bulukumbak.go.id"
+              href="https://bulukumbakab.go.id"
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent-400 hover:text-white font-bold transition-colors underline decoration-dotted flex items-center gap-1"
@@ -122,8 +149,10 @@ export const Navbar: React.FC = () => {
         </div>
       </div>
 
+      {/* Navbar tetap statis (sticky) & selalu terlihat saat discroll,
+          sehingga pengguna tidak perlu scroll ke atas hanya untuk membuka menu. */}
       <header
-        className={`sticky top-0 z-50 border-b transition-all duration-500 ${scrolled ? "border-blue-100/80 bg-white/90 shadow-[0_12px_32px_rgba(7,35,82,0.10)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90" : "border-transparent bg-white/98 dark:bg-slate-950/98"}`}
+        className={`sticky top-0 md:top-[36px] z-50 w-full border-b border-neutral-200 bg-white/96 dark:border-neutral-800 dark:bg-neutral-950/96 backdrop-blur transition-all duration-300 print:hidden ${scrolled ? "shadow-[0_12px_32px_rgba(7,35,82,0.08)]" : "shadow-sm"}`}
       >
         <div className="container-desa flex h-[76px] items-center justify-between gap-5">
           <Link
@@ -131,13 +160,14 @@ export const Navbar: React.FC = () => {
             className="group flex min-w-0 items-center gap-3"
             aria-label="Beranda Desa Borong"
           >
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-blue-100 bg-white p-1.5 shadow-[0_6px_18px_rgba(7,55,130,0.12)] transition duration-300 group-hover:-translate-y-0.5 group-hover:shadow-[0_10px_25px_rgba(7,55,130,0.18)] dark:border-slate-700 dark:bg-slate-900">
+            {/* Logo tanpa border kotak, menggunakan drop-shadow agar batas tetap jelas */}
+            <span className="grid h-12 w-12 shrink-0 place-items-center transition-transform duration-300 group-hover:-translate-y-0.5">
               <Image
                 src={logoBulukumba}
                 alt="Lambang Kabupaten Bulukumba"
-                width={36}
-                height={36}
-                className="h-full w-full object-contain"
+                width={44}
+                height={44}
+                className="h-auto w-11 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.15)] dark:drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
                 priority
               />
             </span>
@@ -159,22 +189,47 @@ export const Navbar: React.FC = () => {
               const menuLabel = menu.i18nKey
                 ? t(menu.i18nKey)
                 : (menu.label ?? "Menu");
+              const menuKey = menu.i18nKey ?? menu.href;
+              const isMenuOpen = openMenu === menuKey;
               return (
                 <div
-                  key={menu.i18nKey ?? menu.href}
-                  className="group relative h-full"
+                  key={menuKey}
+                  data-nav-dropdown
+                  className="relative h-full"
+                  onMouseEnter={() => {
+                    if (menu.children) setOpenMenu(menuKey);
+                  }}
+                  onMouseLeave={() => {
+                    if (menu.children) setOpenMenu(null);
+                  }}
                 >
                   <Link
                     href={menu.href}
+                    onClick={(event) => {
+                      if (!menu.children) return;
+                      event.preventDefault();
+                      setOpenMenu(isMenuOpen ? null : menuKey);
+                    }}
+                    aria-haspopup={menu.children ? "menu" : undefined}
+                    aria-expanded={menu.children ? isMenuOpen : undefined}
                     className={`flex h-full items-center gap-1 px-3 text-[13px] font-semibold transition-colors ${isActive(menu.href) ? "text-blue-700 dark:text-blue-300" : "text-slate-600 hover:text-blue-700 dark:text-slate-300 dark:hover:text-white"}`}
                   >
                     {menuLabel}
                     {menu.children && (
-                      <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180" />
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 transition-transform duration-200 ${isMenuOpen ? "rotate-180" : ""}`}
+                      />
                     )}
                   </Link>
                   {menu.children && (
-                    <div className="pointer-events-none absolute left-1/2 top-[68px] w-60 -translate-x-1/2 translate-y-2 rounded-2xl border border-blue-100 bg-white p-2 opacity-0 shadow-[0_18px_45px_rgba(4,35,83,0.16)] transition-all duration-200 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 dark:border-slate-700 dark:bg-slate-900">
+                    <div
+                      role="menu"
+                      className={`absolute left-1/2 top-[68px] w-60 -translate-x-1/2 rounded-2xl border border-blue-100 bg-white p-2 shadow-[0_18px_45px_rgba(4,35,83,0.16)] transition-all duration-200 dark:border-slate-700 dark:bg-slate-900 ${
+                        isMenuOpen
+                          ? "pointer-events-auto translate-y-0 opacity-100"
+                          : "pointer-events-none translate-y-2 opacity-0"
+                      }`}
+                    >
                       {menu.children.map((child) => {
                         const childLabel = child.i18nKey
                           ? t(child.i18nKey)
@@ -185,6 +240,7 @@ export const Navbar: React.FC = () => {
                           <Link
                             key={childKey}
                             href={child.href}
+                            role="menuitem"
                             className={`block rounded-xl px-3 py-2.5 text-xs font-semibold transition-colors ${pathname === child.href ? "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300" : "text-slate-600 hover:bg-blue-50 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-slate-800"}`}
                           >
                             {childLabel}
@@ -200,12 +256,13 @@ export const Navbar: React.FC = () => {
 
           <div className="hidden items-center gap-2 xl:flex">
             <Link
-              href="/layanan/lacak"
+              href="/cari"
               className="grid h-9 w-9 place-items-center rounded-full text-slate-500 transition hover:bg-blue-50 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-slate-800"
-              aria-label={t("Navbar.trackApplication")}
+              aria-label={t("Navbar.searchSite", "Cari konten di situs")}
             >
-              <Search className="h-4 w-4" />
+              <Search className="h-4 w-4" aria-hidden="true" />
             </Link>
+            <NotificationBell />
             <LanguageToggle />
             <button
               onClick={toggleTheme}
@@ -224,7 +281,7 @@ export const Navbar: React.FC = () => {
                   href="/akun"
                   className="grid h-8 w-8 place-items-center rounded-full bg-blue-700 text-xs font-bold text-white"
                 >
-                  {user?.nama?.charAt(0)}
+                  {user?.nama ? user.nama.charAt(0) : "👤"}
                 </Link>
                 <button
                   onClick={logout}
@@ -276,6 +333,14 @@ export const Navbar: React.FC = () => {
             className="container-desa grid gap-1"
             aria-label={t("Navbar.mobileNav")}
           >
+            <Link
+              href="/cari"
+              className="flex items-center gap-3 rounded-xl bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700 dark:bg-slate-800 dark:text-slate-200"
+              aria-label={t("Navbar.searchSite", "Cari konten di situs")}
+            >
+              <Search className="h-4 w-4" aria-hidden="true" />
+              {t("Navbar.searchSite", "Cari konten di situs")}
+            </Link>
             {menuConfig.map((menu) => {
               const menuLabel = menu.i18nKey
                 ? t(menu.i18nKey)
@@ -318,11 +383,28 @@ export const Navbar: React.FC = () => {
                   <FileText className="h-4 w-4" /> {t("Navbar.applyLetter")}
                 </Button>
               </Link>
-              <Link href="/login" className="flex-1">
-                <Button variant="outline" className="w-full rounded-full">
-                  {t("Navbar.login")}
-                </Button>
-              </Link>
+              {isAuthenticated ? (
+                <div className="flex flex-1 gap-2">
+                  <Link href="/akun" className="flex-1">
+                    <Button variant="outline" className="w-full rounded-full">
+                      {user?.nama?.charAt(0) ?? "👤"}{" "}
+                      {t("Navbar.myAccount") || "Akun Saya"}
+                    </Button>
+                  </Link>
+                  <button
+                    onClick={logout}
+                    className="flex-1 rounded-full border border-primary-200 text-xs font-bold text-primary-600 hover:bg-primary-50 dark:border-primary-800 dark:text-primary-400 dark:hover:bg-primary-950/30 px-3 py-2 transition-colors"
+                  >
+                    {t("Navbar.signOut")}
+                  </button>
+                </div>
+              ) : (
+                <Link href="/login" className="flex-1">
+                  <Button variant="outline" className="w-full rounded-full">
+                    {t("Navbar.login")}
+                  </Button>
+                </Link>
+              )}
             </div>
           </nav>
         </div>

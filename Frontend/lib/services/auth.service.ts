@@ -1,5 +1,5 @@
 import { ApiError, apiRequest } from '@/lib/services/api';
-import type { AuthSession, LoginInput, RegisterInput, User } from '@/types/user';
+import type { LoginInput, RegisterInput, User } from '@/types/user';
 
 export type ChangePasswordInput = { passwordLama: string; passwordBaru: string };
 
@@ -11,26 +11,20 @@ export type RegisterResult = {
 
 type AuthResponse = {
   user: User;
-  token: string;
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: string;
 };
 
-function toSession(response: AuthResponse): AuthSession {
-  return { user: response.user, token: response.accessToken || response.token, refreshToken: response.refreshToken, expiresAt: response.expiresAt };
-}
-
-export async function loginService(input: LoginInput): Promise<AuthSession> {
-  return toSession(await apiRequest<AuthResponse>('/auth/login', { method: 'POST', body: input }));
+export async function loginService(input: LoginInput): Promise<User> {
+  const resp = await apiRequest<AuthResponse>('/auth/login', { method: 'POST', body: input, auth: false });
+  return resp.user;
 }
 
 export async function registerService(input: RegisterInput): Promise<RegisterResult> {
   return apiRequest<RegisterResult>('/auth/register', { method: 'POST', body: input });
 }
 
-export async function verifyOtpService(email: string, code: string): Promise<AuthSession> {
-  return toSession(await apiRequest<AuthResponse>('/auth/verify-otp', { method: 'POST', body: { email, code } }));
+export async function verifyOtpService(email: string, code: string): Promise<User> {
+  const resp = await apiRequest<AuthResponse>('/auth/verify-otp', { method: 'POST', body: { email, code } });
+  return resp.user;
 }
 
 export async function resendOtpService(email: string): Promise<{ message: string }> {
@@ -45,9 +39,9 @@ export async function resetPasswordService(email: string, code: string, password
   return apiRequest<{ message: string }>('/auth/reset-password', { method: 'POST', body: { email, code, passwordBaru } });
 }
 
-export async function getCurrentUserSession(token: string): Promise<User | null> {
+export async function getCurrentUserSession(): Promise<User | null> {
   try {
-    return await apiRequest<User>('/auth/me', { auth: true, token });
+    return await apiRequest<User>('/auth/me', { auth: true });
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) return null;
     throw error;

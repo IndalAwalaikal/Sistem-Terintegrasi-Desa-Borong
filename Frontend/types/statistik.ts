@@ -12,6 +12,19 @@ export interface StatistikPenduduk {
   perAgama: { agama: string; jumlah: number }[];
 }
 
+export interface StatistikBulanan {
+  bulan: number;
+  lahir: number;
+  meninggal: number;
+  pindahMasuk: number;
+  pindahKeluar: number;
+}
+
+export interface TrenPenduduk {
+  tahun: number;
+  data: StatistikBulanan[];
+}
+
 export interface ApbdesItem {
   tahun: number;
   bulan?: number;

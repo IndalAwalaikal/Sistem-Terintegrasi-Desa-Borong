@@ -2,21 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { getStatistikPenduduk } from '@/lib/services/statistik.service';
-import type { StatistikPenduduk } from '@/types/statistik';
+import { getStatistikPenduduk, getTrenPenduduk } from '@/lib/services/statistik.service';
+import type { StatistikPenduduk, TrenPenduduk } from '@/types/statistik';
 import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Filter, Calendar, RotateCcw, CheckCircle2 } from 'lucide-react';
+import { Select } from '@/components/ui/Select';
+import { Reveal, CountUp } from '@/components/ui';
+import { Filter, RotateCcw, CheckCircle2 } from 'lucide-react';
 import { formatAngka } from '@/lib/utils/format';
 import { getCurrentYear, getTahunOptions } from '@/lib/utils/date';
 import { PublicMasthead } from '@/components/layout/PublicMasthead';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
 const TAHUN_OPTIONS = getTahunOptions();
-const BULAN_NAMES = [
-  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-];
 
 // Lazy-load recharts charts
 const StatistikCharts = dynamic(
@@ -34,11 +32,10 @@ const StatistikCharts = dynamic(
 
 export default function StatistikPage() {
   const [baseData, setBaseData] = useState<StatistikPenduduk | null>(null);
+  const [tren, setTren] = useState<TrenPenduduk | null>(null);
   const [selectedTahun, setSelectedTahun] = useState<number>(getCurrentYear());
-  const [selectedBulan, setSelectedBulan] = useState<string>('semua');
-  const [selectedTanggal, setSelectedTanggal] = useState<string>('semua');
   const [dusun, setDusun] = useState('semua');
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -48,19 +45,30 @@ export default function StatistikPage() {
         setBaseData(res);
       })
       .finally(() => setLoading(false));
+    getTrenPenduduk(selectedTahun)
+      .then(setTren)
+      .catch(() => setTren(null));
   }, [selectedTahun]);
 
   const resetFilters = () => {
     setSelectedTahun(getCurrentYear());
-    setSelectedBulan('semua');
-    setSelectedTanggal('semua');
     setDusun('semua');
   };
 
-  if (!baseData) {
+    if (!baseData) {
     return (
-      <div className="py-20 text-center">
-        <p className="text-neutral-500">{t('Statistik.loading')}</p>
+      <div className="py-16 sm:py-20">
+        <div className="container-desa space-y-8">
+          <Skeleton variant="rectangular" className="h-12 w-48 rounded-xl" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Skeleton variant="rectangular" className="h-28 w-full rounded-2xl" />
+            <Skeleton variant="rectangular" className="h-28 w-full rounded-2xl" />
+            <Skeleton variant="rectangular" className="h-28 w-full rounded-2xl" />
+            <Skeleton variant="rectangular" className="h-28 w-full rounded-2xl" />
+          </div>
+          <Skeleton variant="rectangular" className="h-72 w-full rounded-2xl" />
+          <Skeleton variant="rectangular" className="h-48 w-full rounded-2xl" />
+        </div>
       </div>
     );
   }
@@ -96,24 +104,13 @@ export default function StatistikPage() {
   const rincian =
     displayData.rincianDusun?.filter(
       (item) => dusun === 'semua' || item.dusun === dusun,
-    ).map((item) => {
-      const factor = selectedBulan === 'semua' ? 1 : 1 / 12;
-      return {
-        ...item,
-        kelahiran: Math.max(0, Math.round(item.kelahiran * factor)),
-        kematian: Math.max(0, Math.round(item.kematian * factor)),
-        pindahMasuk: Math.max(0, Math.round(item.pindahMasuk * factor)),
-        pindahKeluar: Math.max(0, Math.round(item.pindahKeluar * factor)),
-      };
-    }) ?? [];
+    ) ?? [];
 
   const pctLaki = totalPenduduk > 0 ? ((lakiLaki / totalPenduduk) * 100).toFixed(1) : '0';
   const pctPerempuan = totalPenduduk > 0 ? ((perempuan / totalPenduduk) * 100).toFixed(1) : '0';
 
   const activeFiltersCount =
     (selectedTahun !== getCurrentYear() ? 1 : 0) +
-    (selectedBulan !== 'semua' ? 1 : 0) +
-    (selectedTanggal !== 'semua' ? 1 : 0) +
     (dusun !== 'semua' ? 1 : 0);
 
   return (
@@ -137,9 +134,7 @@ export default function StatistikPage() {
                 <h3 className="text-sm font-extrabold text-neutral-900 dark:text-white">
                   Filter Data Statistik Demografi
                 </h3>
-                <p className="text-[11px] text-neutral-500">
-                  Pilih rentang Tahun, Bulan, Tanggal pencatatan, dan Wilayah Dusun.
-                </p>
+                                                <p className="text-[11px] text-neutral-500">Pilih Tahun dan Wilayah Dusun.</p>
               </div>
             </div>
 
@@ -154,78 +149,27 @@ export default function StatistikPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3">
             {/* Filter Tahun */}
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 block">
-                Pilih Tahun:
-              </label>
-              <select
-                value={selectedTahun}
-                onChange={(e) => setSelectedTahun(Number(e.target.value))}
-                className="w-full rounded-xl border border-neutral-200 bg-neutral-50 dark:bg-neutral-950 dark:border-neutral-800 px-3 py-2 text-xs font-bold text-neutral-900 dark:text-white outline-none focus:border-primary-500"
-              >
-                {TAHUN_OPTIONS.map((th) => (
-                  <option key={th} value={th}>
-                    Tahun {th}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filter Bulan */}
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 block">
-                Pilih Bulan:
-              </label>
-              <select
-                value={selectedBulan}
-                onChange={(e) => setSelectedBulan(e.target.value)}
-                className="w-full rounded-xl border border-neutral-200 bg-neutral-50 dark:bg-neutral-950 dark:border-neutral-800 px-3 py-2 text-xs font-bold text-neutral-900 dark:text-white outline-none focus:border-primary-500"
-              >
-                <option value="semua">Semua Bulan (Setahun Penuh)</option>
-                {BULAN_NAMES.map((bName, idx) => (
-                  <option key={idx} value={String(idx + 1)}>
-                    Bulan {bName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filter Tanggal / Cut-off */}
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 block">
-                Pilih Cut-Off Tanggal:
-              </label>
-              <select
-                value={selectedTanggal}
-                onChange={(e) => setSelectedTanggal(e.target.value)}
-                className="w-full rounded-xl border border-neutral-200 bg-neutral-50 dark:bg-neutral-950 dark:border-neutral-800 px-3 py-2 text-xs font-bold text-neutral-900 dark:text-white outline-none focus:border-primary-500"
-              >
-                <option value="semua">Akhir Periode (Semua Tanggal)</option>
-                <option value="15">Pertengahan Bulan (Tanggal 15)</option>
-                <option value="1">Awal Bulan (Tanggal 1)</option>
-              </select>
-            </div>
+            <Select
+              label="Pilih Tahun:"
+              value={selectedTahun}
+              onChange={(e) => setSelectedTahun(Number(e.target.value))}
+              options={TAHUN_OPTIONS.map((th) => ({ value: String(th), label: `Tahun ${th}` }))}
+              className="px-3 py-2 text-xs font-bold"
+            />
 
             {/* Filter Dusun */}
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 block">
-                Pilih Wilayah Dusun:
-              </label>
-              <select
-                value={dusun}
-                onChange={(e) => setDusun(e.target.value)}
-                className="w-full rounded-xl border border-neutral-200 bg-neutral-50 dark:bg-neutral-950 dark:border-neutral-800 px-3 py-2 text-xs font-bold text-neutral-900 dark:text-white outline-none focus:border-primary-500"
-              >
-                <option value="semua">Semua Dusun</option>
-                {displayData.rincianDusun?.map((item) => (
-                  <option key={item.dusun} value={item.dusun}>
-                    {item.dusun}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label="Pilih Wilayah Dusun:"
+              value={dusun}
+              onChange={(e) => setDusun(e.target.value)}
+              options={[
+                { value: 'semua', label: 'Semua Dusun' },
+                ...(displayData.rincianDusun?.map((item) => ({ value: item.dusun, label: item.dusun })) ?? []),
+              ]}
+              className="px-3 py-2 text-xs font-bold"
+            />
           </div>
 
           {/* Active Filter Summary Pill */}
@@ -237,53 +181,33 @@ export default function StatistikPage() {
               Tahun: {selectedTahun}
             </span>
             <span className="bg-neutral-100 dark:bg-neutral-800 px-2.5 py-0.5 rounded-full font-semibold">
-              Bulan: {selectedBulan === 'semua' ? 'Semua Bulan' : BULAN_NAMES[Number(selectedBulan) - 1]}
-            </span>
-            {selectedTanggal !== 'semua' && (
-              <span className="bg-neutral-100 dark:bg-neutral-800 px-2.5 py-0.5 rounded-full font-semibold">
-                Tanggal: Tgl {selectedTanggal}
-              </span>
-            )}
-            <span className="bg-neutral-100 dark:bg-neutral-800 px-2.5 py-0.5 rounded-full font-semibold">
               Dusun: {dusun}
             </span>
           </div>
         </Card>
 
-        {/* Counter Summary */}
+                {/* Counter Summary — animasi berjenjang via Reveal + CountUp angka */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="p-5 text-center">
-            <p className="text-xs text-neutral-400 font-bold uppercase">{t('Statistik.totalPenduduk')}</p>
-            <h3 className="text-2xl font-black text-primary-600 dark:text-primary-400 mt-1">
-              {formatAngka(displayData.totalPenduduk)}
-            </h3>
-            <p className="text-[11px] text-neutral-500">{t('Statistik.jiwa')}</p>
-          </Card>
-          <Card className="p-5 text-center">
-            <p className="text-xs text-neutral-400 font-bold uppercase">{t('Statistik.kepalaKeluarga')}</p>
-            <h3 className="text-2xl font-black text-secondary-600 dark:text-secondary-400 mt-1">
-              {formatAngka(displayData.jumlahKK)}
-            </h3>
-            <p className="text-[11px] text-neutral-500">{t('Statistik.kk')}</p>
-          </Card>
-          <Card className="p-5 text-center">
-            <p className="text-xs text-neutral-400 font-bold uppercase">{t('Statistik.lakiLaki')}</p>
-            <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-              {formatAngka(displayData.lakiLaki)}
-            </h3>
-            <p className="text-[11px] text-neutral-500">{t('Statistik.jiwa')} ({pctLaki}%)</p>
-          </Card>
-          <Card className="p-5 text-center">
-            <p className="text-xs text-neutral-400 font-bold uppercase">{t('Statistik.perempuan')}</p>
-            <h3 className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-1">
-              {formatAngka(displayData.perempuan)}
-            </h3>
-            <p className="text-[11px] text-neutral-500">{t('Statistik.jiwa')} ({pctPerempuan}%)</p>
-          </Card>
+          {[
+            { label: t('Statistik.totalPenduduk'), color: 'text-primary-600 dark:text-primary-400', num: displayData.totalPenduduk, suffix: <>{t('Statistik.jiwa')}</> },
+            { label: t('Statistik.kepalaKeluarga'), color: 'text-secondary-600 dark:text-secondary-400', num: displayData.jumlahKK, suffix: <>{t('Statistik.kk')}</> },
+            { label: t('Statistik.lakiLaki'), color: 'text-emerald-600 dark:text-emerald-400', num: displayData.lakiLaki, suffix: <>{t('Statistik.jiwa')} ({pctLaki}%)</> },
+            { label: t('Statistik.perempuan'), color: 'text-rose-600 dark:text-rose-400', num: displayData.perempuan, suffix: <>{t('Statistik.jiwa')} ({pctPerempuan}%)</> },
+          ].map((c, i) => (
+            <Reveal key={c.label} delay={i * 120}>
+              <Card className="p-5 text-center">
+                <p className="text-xs text-neutral-400 font-bold uppercase">{c.label}</p>
+                <h3 className={`text-2xl font-black mt-1 ${c.color}`}>
+                  <CountUp to={c.num} formatter={(n) => formatAngka(Math.round(n))} />
+                </h3>
+                <p className="text-[11px] text-neutral-500">{c.suffix}</p>
+              </Card>
+            </Reveal>
+          ))}
         </div>
 
         {/* Charts (recharts — lazy-loaded via dynamic()) */}
-        <StatistikCharts data={displayData} />
+        <StatistikCharts data={displayData} tren={tren ?? undefined} />
 
         {/* Rincian per Dusun — tabel */}
         <Card className="p-6">

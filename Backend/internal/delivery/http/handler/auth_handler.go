@@ -1,12 +1,12 @@
 package handler
 
 import (
+	"net/http"
 	"time"
 
 	httpapi "desa-borong-api/internal/delivery/http/apiresponse"
 	"desa-borong-api/internal/domain"
 	"desa-borong-api/internal/usecase/auth"
-	"net/http"
 )
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
@@ -34,10 +34,10 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		httpapi.Error(w, err)
 		return
 	}
-	httpapi.JSON(w, 200, sessionResp(s))
+	setSessionCookies(w, r, s)
+	httpapi.JSON(w, 200, map[string]any{"user": userResp(s.User)})
 }
 
-// VerifyOTP validates a registration OTP and starts a session.
 func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	var v struct{ Email, Code string }
 	if decode(r, &v) != nil || !valid(v.Email, 3, 191) || !validEmail(v.Email) || !valid(v.Code, 4, 10) || !digits(v.Code) {
@@ -49,10 +49,10 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		httpapi.Error(w, err)
 		return
 	}
-	httpapi.JSON(w, 200, sessionResp(s))
+	setSessionCookies(w, r, s)
+	httpapi.JSON(w, 200, map[string]any{"user": userResp(s.User)})
 }
 
-// ResendOTP re-issues a verification code to the given email.
 func (h *Handler) ResendOTP(w http.ResponseWriter, r *http.Request) {
 	var v struct{ Email string }
 	if decode(r, &v) != nil || !valid(v.Email, 3, 191) || !validEmail(v.Email) {
@@ -66,7 +66,6 @@ func (h *Handler) ResendOTP(w http.ResponseWriter, r *http.Request) {
 	httpapi.JSON(w, 200, map[string]any{"message": "Kode verifikasi telah dikirim ulang ke email Anda."})
 }
 
-// ForgotPassword issues a password-reset OTP (never reveals if email exists).
 func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	var v struct{ Email string }
 	if decode(r, &v) != nil || !valid(v.Email, 3, 191) || !validEmail(v.Email) {
@@ -80,7 +79,6 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	httpapi.JSON(w, 200, map[string]any{"message": "Jika akun terdaftar, kode reset password telah dikirim ke email Anda."})
 }
 
-// ResetPassword consumes a reset OTP and changes the password.
 func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	var v struct{ Email, Code, PasswordBaru string }
 	if decode(r, &v) != nil || !valid(v.Email, 3, 191) || !validEmail(v.Email) || !valid(v.Code, 4, 10) || !digits(v.Code) || !valid(v.PasswordBaru, 8, 128) {
@@ -94,41 +92,72 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	httpapi.JSON(w, 200, map[string]any{"message": "Password berhasil diubah. Silakan masuk kembali."})
 }
 
-func sessionResp(s auth.Session) map[string]any {
-	resp := map[string]any{
-		"token":        s.AccessToken,
-		"accessToken":  s.AccessToken,
-		"refreshToken": s.RefreshToken,
-		"expiresAt":    s.ExpiresAt.Format(time.RFC3339),
-		"user":         userResp(s.User),
+func setSessionCookies(w http.ResponseWriter, r *http.Request, s auth.Session) {
+	accessMaxAge := int(time.Until(s.ExpiresAt).Seconds())
+	if accessMaxAge > 86400 {
+		accessMaxAge = 86400
 	}
-	return resp
+	refreshMaxAge := 90 * 24 * 3600
+	var refreshExpires time.Time
+	if s.RefreshExpiresAt != nil {
+		refreshMaxAge = int(time.Until(*s.RefreshExpiresAt).Seconds())
+		if refreshMaxAge > 90*24*3600 {
+			refreshMaxAge = 90 * 24 * 3600
+		}
+		refreshExpires = *s.RefreshExpiresAt
+	} else {
+		refreshExpires = time.Now().Add(time.Duration(refreshMaxAge) * time.Second)
+	}
+	secure := r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https"
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    s.AccessToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   accessMaxAge,
+		Expires:  s.ExpiresAt,
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    s.RefreshToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   refreshMaxAge,
+		Expires:  refreshExpires,
+	})
+}
+
+func clearSessionCookies(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{Name: "access_token", Value: "", Path: "/", HttpOnly: true, Secure: false, SameSite: http.SameSiteLaxMode, MaxAge: -1})
+	http.SetCookie(w, &http.Cookie{Name: "refresh_token", Value: "", Path: "/", HttpOnly: true, Secure: false, SameSite: http.SameSiteLaxMode, MaxAge: -1})
 }
 
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
-	var v struct{ RefreshToken string }
-	if decode(r, &v) != nil || !valid(v.RefreshToken, 20, 500) {
-		httpapi.Error(w, domain.ErrValidation)
+	ck, err := r.Cookie("refresh_token")
+	if err != nil || ck.Value == "" {
+		httpapi.Error(w, domain.ErrUnauthorized)
 		return
 	}
-	a, ref, err := h.app.Auth.Refresh(r.Context(), v.RefreshToken)
+	a, ref, err := h.app.Auth.Refresh(r.Context(), ck.Value)
 	if err != nil {
 		httpapi.Error(w, err)
 		return
 	}
-	httpapi.JSON(w, 200, map[string]any{"token": a, "accessToken": a, "refreshToken": ref})
+	s := auth.Session{AccessToken: a, RefreshToken: ref, ExpiresAt: time.Now().Add(24 * time.Hour)}
+	setSessionCookies(w, r, s)
+	httpapi.JSON(w, 200, map[string]any{"ok": true})
 }
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
-	var v struct{ RefreshToken string }
-	if decode(r, &v) != nil || !valid(v.RefreshToken, 20, 500) {
-		httpapi.Error(w, domain.ErrValidation)
-		return
+	ck, err := r.Cookie("refresh_token")
+	if err == nil && ck.Value != "" {
+		_ = h.app.Auth.Logout(r.Context(), ck.Value)
 	}
-	if err := h.app.Auth.Logout(r.Context(), v.RefreshToken); err != nil {
-		httpapi.Error(w, err)
-		return
-	}
+	clearSessionCookies(w)
 	httpapi.JSON(w, 200, map[string]bool{"ok": true})
 }
 
@@ -154,7 +183,6 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	httpapi.JSON(w, 200, map[string]bool{"ok": true})
 }
 
-// UpdateProfile handles PUT /api/users/profile (logged-in user edits own data).
 func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	var v struct {
 		Nama, Email, NIK, NoKK, TempatLahir, TanggalLahir, JenisKelamin, Agama, StatusPerkawinan, Pekerjaan, RT, RW, Dusun, Telepon, Alamat, AvatarUrl string

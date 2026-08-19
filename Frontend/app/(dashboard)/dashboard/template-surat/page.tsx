@@ -9,11 +9,12 @@ import {
 } from '@/lib/services/persuratan.service';
 import type { JenisSurat } from '@/types/persuratan';
 import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Modal } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
   FileStack,
   Plus,
@@ -25,7 +26,6 @@ import {
   ListChecks,
   Search,
   CheckCircle2,
-  XCircle,
 } from 'lucide-react';
 import { useToastStore } from '@/store/toastStore';
 
@@ -64,7 +64,6 @@ export default function DashboardTemplateSuratPage() {
 
   useEffect(() => {
     void refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openAdd = () => {
@@ -139,14 +138,23 @@ export default function DashboardTemplateSuratPage() {
   };
 
 
-  const handleDelete = async (t: JenisSurat) => {
-    if (!window.confirm(`Hapus template surat ${t.kode} (${t.nama})?`)) return;
+  const [deleteTarget, setDeleteTarget] = useState<JenisSurat | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = (t: JenisSurat) => setDeleteTarget(t);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await deleteJenisSuratAdmin(t.kode);
+      await deleteJenisSuratAdmin(deleteTarget.kode);
       showSuccess('Template surat berhasil dihapus.');
       await refresh();
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Gagal menghapus template.');
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -221,8 +229,9 @@ export default function DashboardTemplateSuratPage() {
 
       {/* Main List */}
       {loading ? (
-        <div className="p-10 text-center text-sm text-neutral-500 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800">
-          Memuat daftar template surat...
+        <div className="grid gap-5 grid-cols-1 lg:grid-cols-2">
+          <Skeleton className="h-48 w-full rounded-2xl" />
+          <Skeleton className="h-48 w-full rounded-2xl" />
         </div>
       ) : filtered.length === 0 ? (
         <Card className="p-10 text-center text-sm text-neutral-500">
@@ -454,6 +463,15 @@ export default function DashboardTemplateSuratPage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Hapus Template Surat"
+        message={<>Yakin ingin menghapus template surat <strong>{deleteTarget?.kode} ({deleteTarget?.nama})</strong>? Tindakan ini tidak dapat dibatalkan.</>}
+        isLoading={deleting}
+        onConfirm={() => void handleConfirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

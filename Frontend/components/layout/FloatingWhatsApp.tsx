@@ -5,19 +5,19 @@ import { MessageCircle } from 'lucide-react';
 
 /**
  * Tombol WhatsApp melayang sebagai kanal bantuan warga.
- *
- * TODO(frontend): ganti "6288xxxxxxxx" dengan nomor resmi perangkat desa
- * (format internasional tanpa tanda + / spasi).
+ * Nomor diambil dariNEXT_PUBLIC_WHATSAPP_NUMBER di .env.local.
+ * Jika nomor kosong atau meng mengandung 'x', tombol tidak ditampilkan.
  */
-const WA_NUMBER = '6285757106358';
+const WA_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '';
 
-const WA_LINK = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(
-  'Halo Admin Desa Borong, saya ingin bertanya tentang layanan desa.'
-)}`;
+const WA_LINK = WA_NUMBER
+  ? `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(
+      'Halo Admin Desa Borong, saya ingin bertanya tentang layanan desa.'
+    )}`
+  : '';
 
 export const FloatingWhatsApp: React.FC = () => {
-  if (WA_NUMBER.includes('x')) {
-    // Belum dikonfigurasi: jangan tampilkan tombol yang mengarah ke nomor palsu.
+  if (!WA_NUMBER || WA_NUMBER.includes('x')) {
     return null;
   }
 

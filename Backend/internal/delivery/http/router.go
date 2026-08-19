@@ -2,13 +2,13 @@ package httpapi
 
 import (
 	"database/sql"
+	"net/http"
 	"time"
 
 	apiresponse "desa-borong-api/internal/delivery/http/apiresponse"
 	"desa-borong-api/internal/delivery/http/handler"
 	"desa-borong-api/internal/delivery/http/middleware"
 	iauth "desa-borong-api/internal/infrastructure/auth"
-	"net/http"
 )
 
 func NewRouter(h *handler.Handler, tokens *iauth.Service, db *sql.DB) http.Handler {
@@ -17,12 +17,13 @@ func NewRouter(h *handler.Handler, tokens *iauth.Service, db *sql.DB) http.Handl
 	admin := middleware.Role("admin", "super_admin")
 	super := middleware.Role("super_admin")
 	limit := middleware.NewRateLimiter(10, time.Minute).Middleware
-	_ = limit
+	csrfMiddleware := middleware.NewCSRF()
+	csrf := csrfMiddleware.Middleware
 
 	public := func(pattern string, fn http.HandlerFunc) { m.Handle(pattern, fn) }
-	secure := func(pattern string, fn http.HandlerFunc) { m.Handle(pattern, auth(fn)) }
-	administrate := func(pattern string, fn http.HandlerFunc) { m.Handle(pattern, auth(admin(fn))) }
 	rateLimited := func(pattern string, fn http.HandlerFunc) { m.Handle(pattern, limit(fn)) }
+	csrfSecure := func(pattern string, fn http.HandlerFunc) { m.Handle(pattern, csrf(auth(fn))) }
+	csrfAdministrate := func(pattern string, fn http.HandlerFunc) { m.Handle(pattern, csrf(auth(admin(fn)))) }
 
 	public("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		apiresponse.JSON(w, 200, map[string]string{"status": "ok"})
@@ -34,8 +35,17 @@ func NewRouter(h *handler.Handler, tokens *iauth.Service, db *sql.DB) http.Handl
 		}
 		apiresponse.JSON(w, 200, map[string]string{"status": "ready"})
 	})
+	// Endpoint ini selalu men-generate token CSRF baru dan menyetelnya sebagai cookie.
+	// Frontend wajib memanggil endpoint ini sekali (saat inisialisasi / sebelum form mutasi)
+	// agar cookie csrf_token_v2 tersedia untuk dikirim ulang sebagai header X-CSRF-Token.
+	public("/api/csrf-token", func(w http.ResponseWriter, r *http.Request) {
+		token := csrfMiddleware.GenerateAndSetCookie(w)
+		apiresponse.JSON(w, 200, map[string]string{"csrfToken": token})
+	})
+	public("/api/metrics", func(w http.ResponseWriter, r *http.Request) {
+		apiresponse.JSON(w, 200, map[string]string{"status": "ok"})
+	})
 
-	// Auth & account
 	rateLimited("POST /api/auth/register", h.Register)
 	rateLimited("POST /api/auth/verify-otp", h.VerifyOTP)
 	rateLimited("POST /api/auth/resend-otp", h.ResendOTP)
@@ -43,114 +53,127 @@ func NewRouter(h *handler.Handler, tokens *iauth.Service, db *sql.DB) http.Handl
 	rateLimited("POST /api/auth/reset-password", h.ResetPassword)
 	rateLimited("POST /api/auth/login", h.Login)
 	rateLimited("POST /api/auth/refresh", h.Refresh)
-	secure("POST /api/auth/logout", h.Logout)
-	secure("GET /api/auth/me", h.Me)
-	secure("POST /api/auth/change-password", h.ChangePassword)
-	secure("PUT /api/users/profile", h.UpdateProfile)
+	csrfSecure("POST /api/auth/logout", h.Logout)
+	csrfSecure("GET /api/auth/me", h.Me)
+	csrfSecure("POST /api/auth/change-password", h.ChangePassword)
+	csrfSecure("PUT /api/users/profile", h.UpdateProfile)
 	m.Handle("GET /api/users", auth(super(http.HandlerFunc(h.UsersList))))
-	m.Handle("PUT /api/users/{id}", auth(super(http.HandlerFunc(h.UserUpdate))))
+	m.Handle("PUT /api/users/{id}", csrf(auth(super(http.HandlerFunc(h.UserUpdate)))))
 
-	// Berita
 	public("GET /api/berita", h.BeritaList)
 	public("GET /api/berita/{slug}", h.BeritaGet)
-	administrate("GET /api/admin/berita", h.BeritaAdminList)
-	administrate("POST /api/berita", h.BeritaCreate)
-	administrate("PUT /api/berita/{id}", h.BeritaUpdate)
-	administrate("DELETE /api/berita/{id}", h.BeritaDelete)
+	csrfAdministrate("GET /api/admin/berita", h.BeritaAdminList)
+	csrfAdministrate("POST /api/berita", h.BeritaCreate)
+	csrfAdministrate("PUT /api/berita/{id}", h.BeritaUpdate)
+	csrfAdministrate("DELETE /api/berita/{id}", h.BeritaDelete)
+	public("GET /api/berita/{slug}/komentar", h.BeritaKomentarList)
+	csrfSecure("POST /api/berita/{slug}/komentar", h.BeritaKomentarCreate)
+	csrfSecure("DELETE /api/berita/{slug}/komentar/{id}", h.BeritaKomentarDelete)
 
-	// Layanan & pengajuan
 	public("GET /api/layanan", h.JenisList)
 	public("GET /api/layanan/{kode}", h.JenisGet)
-	administrate("GET /api/admin/layanan", h.JenisAdminList)
-	administrate("POST /api/layanan", h.JenisCreate)
-	administrate("PUT /api/layanan/{kode}", h.JenisUpdate)
-	administrate("DELETE /api/layanan/{kode}", h.JenisDelete)
-	secure("POST /api/pengajuan", h.PengajuanCreate)
-	secure("GET /api/pengajuan/{id}/lampiran/{lampiranID}", h.PengajuanLampiran)
+	csrfAdministrate("GET /api/admin/layanan", h.JenisAdminList)
+	csrfAdministrate("POST /api/layanan", h.JenisCreate)
+	csrfAdministrate("PUT /api/layanan/{kode}", h.JenisUpdate)
+	csrfAdministrate("DELETE /api/layanan/{kode}", h.JenisDelete)
+	csrfSecure("POST /api/pengajuan", h.PengajuanCreate)
+	csrfSecure("GET /api/pengajuan/{id}/lampiran/{lampiranID}", h.PengajuanLampiran)
 	public("GET /api/pengajuan/{nomorResi}", h.PengajuanGet)
 	public("GET /api/surat/{nomorResi}", h.PengajuanGetSurat)
 	public("GET /api/verifikasi/surat/{code}", h.VerifikasiSurat)
-	secure("GET /api/penduduk/nik/{nik}", h.GetPendudukByNIK)
-	secure("GET /api/pengajuan/saya", h.PengajuanSaya)
-	administrate("GET /api/pengajuan", h.PengajuanList)
-	administrate("GET /api/admin/pengajuan/buku-agenda", h.PengajuanBukuAgenda)
-	administrate("PATCH /api/pengajuan/{id}/status", h.PengajuanStatus)
+	csrfSecure("GET /api/penduduk/nik/{nik}", h.GetPendudukByNIK)
+	csrfSecure("GET /api/pengajuan/saya", h.PengajuanSaya)
+	csrfAdministrate("GET /api/pengajuan", h.PengajuanList)
+	csrfAdministrate("GET /api/admin/pengajuan/buku-agenda", h.PengajuanBukuAgenda)
+	csrfAdministrate("PATCH /api/pengajuan/{id}/status", h.PengajuanStatus)
+	csrfAdministrate("POST /api/pengajuan/{id}/publish", h.PengajuanPublish)
+	csrfAdministrate("DELETE /api/admin/pengajuan/{id}", h.PengajuanDelete)
 
-	administrate("POST /api/pengajuan/{id}/publish", h.PengajuanPublish)
-	administrate("DELETE /api/admin/pengajuan/{id}", h.PengajuanDelete)
-
-
-	// Pengaduan
-	secure("POST /api/pengaduan", h.PengaduanCreate)
+	csrfSecure("POST /api/pengaduan", h.PengaduanCreate)
 	public("GET /api/pengaduan/{nomorTiket}", h.PengaduanGet)
-	secure("GET /api/pengaduan/saya", h.PengaduanSaya)
-	administrate("GET /api/pengaduan", h.PengaduanList)
-	administrate("PATCH /api/pengaduan/{id}/status", h.PengaduanStatus)
+	csrfSecure("GET /api/pengaduan/saya", h.PengaduanSaya)
+	csrfAdministrate("GET /api/pengaduan", h.PengaduanList)
+	csrfAdministrate("PATCH /api/pengaduan/{id}/status", h.PengaduanStatus)
 
-	// Profil & data desa
 	public("GET /api/profil-desa", h.ProfilGet)
-	administrate("PUT /api/profil-desa", h.ProfilUpdate)
+	csrfAdministrate("PUT /api/profil-desa", h.ProfilUpdate)
 	public("GET /api/perangkat-desa", h.PerangkatList)
-	administrate("POST /api/perangkat-desa", h.PerangkatCreate)
-	administrate("PUT /api/perangkat-desa/{id}", h.PerangkatUpdate)
-	administrate("DELETE /api/perangkat-desa/{id}", h.PerangkatDelete)
+	csrfAdministrate("POST /api/perangkat-desa", h.PerangkatCreate)
+	csrfAdministrate("PUT /api/perangkat-desa/{id}", h.PerangkatUpdate)
+	csrfAdministrate("DELETE /api/perangkat-desa/{id}", h.PerangkatDelete)
 	public("GET /api/dusun", h.DusunList)
+	public("GET /api/sekilas-info", h.SekilasInfoGet)
+	csrfAdministrate("GET /api/admin/sekilas-info", h.SekilasInfoAdminList)
+	csrfAdministrate("POST /api/sekilas-info", h.SekilasInfoCreate)
+	csrfAdministrate("PUT /api/sekilas-info/{id}", h.SekilasInfoUpdate)
+	csrfAdministrate("DELETE /api/sekilas-info/{id}", h.SekilasInfoDelete)
 	public("GET /api/potensi-desa", h.PotensiList)
+
 	public("GET /api/fasilitas", h.FasilitasList)
-	administrate("POST /api/fasilitas", h.FasilitasCreate)
-	administrate("PUT /api/fasilitas/{id}", h.FasilitasUpdate)
-	administrate("DELETE /api/fasilitas/{id}", h.FasilitasDelete)
+	csrfAdministrate("POST /api/fasilitas", h.FasilitasCreate)
+	csrfAdministrate("PUT /api/fasilitas/{id}", h.FasilitasUpdate)
+	csrfAdministrate("DELETE /api/fasilitas/{id}", h.FasilitasDelete)
 
-	// Statistik, APBDes, agenda
 	public("GET /api/statistik/penduduk", h.StatistikGet)
-	administrate("PUT /api/statistik/penduduk", h.StatistikUpdate)
+	public("GET /api/statistik/penduduk/tren", h.StatistikTrenGet)
+	csrfAdministrate("PUT /api/admin/statistik/penduduk/tren", h.StatistikTrenUpdate)
+	csrfAdministrate("PUT /api/statistik/penduduk", h.StatistikUpdate)
 	public("GET /api/apbdes", h.ApbdesGet)
-	administrate("PUT /api/apbdes", h.ApbdesUpdate)
+	csrfAdministrate("PUT /api/apbdes", h.ApbdesUpdate)
 	public("GET /api/agenda", h.AgendaList)
-	administrate("POST /api/agenda", h.AgendaCreate)
-	administrate("PUT /api/agenda/{id}", h.AgendaUpdate)
-	administrate("DELETE /api/agenda/{id}", h.AgendaDelete)
+	csrfAdministrate("POST /api/agenda", h.AgendaCreate)
+	csrfAdministrate("PUT /api/agenda/{id}", h.AgendaUpdate)
+	csrfAdministrate("DELETE /api/agenda/{id}", h.AgendaDelete)
 
-	// Galeri & UMKM
 	public("GET /api/galeri", h.GaleriList)
 	public("GET /api/galeri/{id}", h.GaleriGet)
-	administrate("POST /api/galeri", h.GaleriCreate)
-	administrate("PUT /api/galeri/{id}", h.GaleriUpdate)
-	administrate("DELETE /api/galeri/{id}", h.GaleriDelete)
+	csrfAdministrate("POST /api/galeri", h.GaleriCreate)
+	csrfAdministrate("PUT /api/galeri/{id}", h.GaleriUpdate)
+	csrfAdministrate("DELETE /api/galeri/{id}", h.GaleriDelete)
 	public("GET /api/umkm", h.UmkmList)
 	public("GET /api/umkm/{slug}", h.UmkmGet)
-	administrate("POST /api/umkm", h.UmkmCreate)
-	administrate("PUT /api/umkm/{id}", h.UmkmUpdate)
-	administrate("DELETE /api/umkm/{id}", h.UmkmDelete)
+	csrfAdministrate("POST /api/umkm", h.UmkmCreate)
+	csrfAdministrate("PUT /api/umkm/{id}", h.UmkmUpdate)
+	csrfAdministrate("DELETE /api/umkm/{id}", h.UmkmDelete)
 
-	// Transparansi Pajak Desa
 	public("GET /api/pajak/ringkasan", h.PajakRingkasan)
 	public("GET /api/pajak/jenis", h.PajakJenisList)
 	public("GET /api/pajak/transaksi", h.PajakTransaksiPublicList)
 	public("GET /api/pajak/transaksi/{nomorBukti}", h.PajakTransaksiGetNomor)
 	public("GET /api/pajak/setoran", h.PajakSetoranList)
 	public("GET /api/pajak/setoran/{id}", h.PajakSetoranGet)
-	secure("GET /api/pajak/saya", h.PajakTransaksiSaya)
+	csrfSecure("GET /api/pajak/saya", h.PajakTransaksiSaya)
 
-	administrate("GET /api/admin/pajak/jenis", h.PajakJenisAdminList)
-	administrate("POST /api/admin/pajak/jenis", h.PajakJenisSave)
-	administrate("PUT /api/admin/pajak/jenis/{id}", h.PajakJenisSave)
-	administrate("DELETE /api/admin/pajak/jenis/{id}", h.PajakJenisDelete)
+	csrfAdministrate("GET /api/admin/pajak/jenis", h.PajakJenisAdminList)
+	csrfAdministrate("POST /api/admin/pajak/jenis", h.PajakJenisSave)
+	csrfAdministrate("PUT /api/admin/pajak/jenis/{id}", h.PajakJenisSave)
+	csrfAdministrate("DELETE /api/admin/pajak/jenis/{id}", h.PajakJenisDelete)
 
-	administrate("GET /api/admin/pajak/wajib-pajak", h.PajakWajibList)
-	administrate("GET /api/admin/pajak/wajib-pajak/{id}", h.PajakWajibGet)
-	administrate("POST /api/admin/pajak/wajib-pajak", h.PajakWajibSave)
-	administrate("PUT /api/admin/pajak/wajib-pajak/{id}", h.PajakWajibSave)
-	administrate("DELETE /api/admin/pajak/wajib-pajak/{id}", h.PajakWajibDelete)
+	csrfAdministrate("GET /api/admin/pajak/wajib-pajak", h.PajakWajibList)
+	csrfAdministrate("GET /api/admin/pajak/wajib-pajak/{id}", h.PajakWajibGet)
+	csrfAdministrate("POST /api/admin/pajak/wajib-pajak", h.PajakWajibSave)
+	csrfAdministrate("PUT /api/admin/pajak/wajib-pajak/{id}", h.PajakWajibSave)
+	csrfAdministrate("DELETE /api/admin/pajak/wajib-pajak/{id}", h.PajakWajibDelete)
 
-	administrate("GET /api/admin/pajak/transaksi", h.PajakTransaksiAdminList)
-	administrate("POST /api/admin/pajak/transaksi", h.PajakTransaksiCreate)
-	administrate("PATCH /api/admin/pajak/transaksi/{id}/status", h.PajakTransaksiStatus)
+	csrfAdministrate("GET /api/admin/pajak/transaksi", h.PajakTransaksiAdminList)
+	csrfAdministrate("POST /api/admin/pajak/transaksi", h.PajakTransaksiCreate)
+	csrfAdministrate("PATCH /api/admin/pajak/transaksi/{id}/status", h.PajakTransaksiStatus)
 
-	administrate("GET /api/admin/pajak/setoran", h.PajakSetoranList)
-	administrate("POST /api/admin/pajak/setoran", h.PajakSetoranCreate)
-	administrate("POST /api/admin/pajak/setoran/{id}/konfirmasi", h.PajakSetoranKonfirmasi)
-	administrate("GET /api/admin/pajak/audit", h.PajakAuditList)
+	csrfAdministrate("GET /api/admin/pajak/setoran", h.PajakSetoranList)
+	csrfAdministrate("POST /api/admin/pajak/setoran", h.PajakSetoranCreate)
+	csrfAdministrate("POST /api/admin/pajak/setoran/{id}/konfirmasi", h.PajakSetoranKonfirmasi)
+	csrfAdministrate("GET /api/admin/pajak/audit", h.PajakAuditList)
+
+	csrfSecure("GET /api/notifikasi", h.NotifikasiList)
+	csrfSecure("GET /api/notifikasi/unread-count", h.NotifikasiCountUnread)
+	csrfSecure("POST /api/notifikasi/{id}/read", h.NotifikasiMarkRead)
+	csrfSecure("POST /api/notifikasi/mark-all-read", h.NotifikasiMarkAllRead)
+	csrfSecure("GET /api/notifikasi/stream", h.NotifikasiStream)
+	csrfAdministrate("GET /api/admin/analytics", h.AnalyticsDashboard)
+
+	// Webhook FlowKirim — dipanggil oleh server FlowKirim (bukan browser),
+	// sehingga tidak memerlukan autentikasi sesi atau CSRF token.
+	public("POST /webhook/whatsapp", h.WebhookWhatsApp)
 
 	return m
 }

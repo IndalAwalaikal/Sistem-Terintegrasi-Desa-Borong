@@ -21,7 +21,8 @@ type Session struct {
 	User         domain.User
 	AccessToken  string
 	RefreshToken string
-	ExpiresAt    time.Time
+	ExpiresAt     time.Time
+	RefreshExpiresAt *time.Time
 }
 
 // RegisterResult is returned by Register. It deliberately does NOT include
@@ -157,11 +158,12 @@ func (s *Service) issueSession(ctx context.Context, user domain.User) (Session, 
 		TokenHash: s.tokens.HashRefresh(raw),
 		ExpiresAt: time.Now().Add(s.refreshTTL),
 		CreatedAt: time.Now(),
+		LastUsedAt: time.Now(),
 	}
 	if err := s.refreshes.Create(ctx, rt); err != nil {
 		return Session{}, err
 	}
-	return Session{User: user, AccessToken: access, RefreshToken: raw, ExpiresAt: exp}, nil
+return Session{User: user, AccessToken: access, RefreshToken: raw, ExpiresAt: exp, RefreshExpiresAt: func(t time.Time) *time.Time { return &t }(time.Now().Add(s.refreshTTL))}, nil
 }
 
 // Refresh rotates the refresh token and returns new tokens. Reuse of a rotated
@@ -169,7 +171,7 @@ func (s *Service) issueSession(ctx context.Context, user domain.User) (Session, 
 func (s *Service) Refresh(ctx context.Context, raw string) (access string, newRefresh string, err error) {
 	if err := s.tx.WithinTx(ctx, func(txCtx context.Context) error {
 		old, err := s.refreshes.GetByHashForUpdate(txCtx, s.tokens.HashRefresh(raw))
-		if err != nil || old.ExpiresAt.Before(time.Now()) {
+		if err != nil || old.ExpiresAt.Before(time.Now()) || time.Since(old.LastUsedAt) > 30*24*time.Hour {
 			return domain.ErrUnauthorized
 		}
 		// A rotated token being reused is a strong theft signal. Revoke all
@@ -193,7 +195,7 @@ func (s *Service) Refresh(ctx context.Context, raw string) (access string, newRe
 		newID := apputil.NewID()
 		nt := domain.RefreshToken{
 			ID: newID, UserID: user.ID, TokenHash: s.tokens.HashRefresh(newRaw),
-			ExpiresAt: time.Now().Add(s.refreshTTL), CreatedAt: time.Now(),
+			ExpiresAt: time.Now().Add(s.refreshTTL), CreatedAt: time.Now(), LastUsedAt: time.Now(),
 		}
 		if err := s.refreshes.Create(txCtx, nt); err != nil {
 			return err

@@ -16,6 +16,13 @@ interface UiState {
   setSearchQuery: (query: string) => void;
 }
 
+function getSystemTheme(): 'light' | 'dark' {
+  if (typeof window !== 'undefined') {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  return 'light';
+}
+
 export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
@@ -49,6 +56,19 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: 'desa-borong-ui',
+      onRehydrateStorage: () => (state) => {
+        if (state && typeof window !== 'undefined') {
+          const stored = localStorage.getItem('desa-borong-ui');
+          if (!stored) {
+            const systemTheme = getSystemTheme();
+            state.setTheme(systemTheme);
+          } else {
+            // Apply the rehydrated theme and locale to the document element
+            document.documentElement.classList.toggle('dark', state.theme === 'dark');
+            document.documentElement.lang = state.locale;
+          }
+        }
+      },
     }
   )
 );

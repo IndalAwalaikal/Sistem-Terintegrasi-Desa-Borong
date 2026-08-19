@@ -13,6 +13,7 @@
   --color-primary-700: #0a478f;
   --color-primary-800: #08376e;
   --color-primary-900: #061f46;
+  --color-primary-950: #031127;
 
   /* Secondary: Navy formal */
   --color-secondary-50: #f1f5f9;
@@ -25,16 +26,19 @@
   --color-secondary-700: #1b3152;
   --color-secondary-800: #112642;
   --color-secondary-900: #081a33;
+  --color-secondary-950: #050f22;
 
-  /* Accent: Kuning / Oranye */
-  --color-accent-50: #fffbeb;
-  --color-accent-100: #fef3c7;
-  --color-accent-200: #fde68a;
-  --color-accent-300: #fcd34d;
-  --color-accent-400: #fbbf24;
-  --color-accent-500: #f59e0b;
-  --color-accent-600: #d97706;
-  --color-accent-700: #b45309;
+  /* Accent: Biru muda (harmonis dengan primary — bukan kuning lagi)
+     Dulu #f59e0b (kuning/oranye) — membuat beranda terlihat ramai.
+     Sekarang sepenuhnya dalam keluarga biru maritim Desa Borong. */
+  --color-accent-50: #eff6ff;
+  --color-accent-100: #dbeafe;
+  --color-accent-200: #bfdbfe;
+  --color-accent-300: #93c5fd;
+  --color-accent-400: #60a5fa;
+  --color-accent-500: #2474d4;
+  --color-accent-600: #0b5dbb;
+  --color-accent-700: #08376e;
 
   /* Semantic */
   --color-success: #16a34a;
@@ -121,6 +125,11 @@
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
+}
+
+@keyframes expandWidth {
+  from { width: 0%; }
+  to { width: var(--target-width, 100%); }
 }
 
 @keyframes shimmer {
@@ -295,6 +304,11 @@
     font-weight: 700;
     line-height: .82;
   }
+
+  .render-optimized {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 500px;
+  }
 }
 
 /* Modern marquee: dua salinan konten memastikan perulangan tanpa jeda. */
@@ -332,35 +346,9 @@
   }
 }
 
-/* Dashboard admin memakai permukaan terang agar tabel, angka, dan status mudah dipindai. */
-.admin-shell .bg-neutral-900 { background-color: #ffffff !important; }
-.admin-shell .bg-neutral-950 { background-color: #f8fbff !important; }
-.admin-shell .bg-neutral-800 { background-color: #eef4fb !important; }
-.admin-shell .border-neutral-800, .admin-shell .divide-neutral-800 { border-color: #d9e5f3 !important; }
-.admin-shell .border-neutral-700 { border-color: #c9d8eb !important; }
-.admin-shell .text-white { color: #102a4f !important; }
-.admin-shell .text-neutral-300 { color: #385170 !important; }
-.admin-shell .text-neutral-200 { color: #28425f !important; }
-.admin-shell .text-neutral-400 { color: #61738b !important; }
-.admin-shell .text-neutral-500 { color: #718198 !important; }
-.admin-shell .hover\:bg-neutral-800\/50:hover, .admin-shell .hover\:bg-neutral-800\/70:hover { background-color: #edf5ff !important; }
-.admin-shell .text-emerald-300 { color: #047857 !important; }
-.admin-shell .text-emerald-400 { color: #047857 !important; }
-.admin-shell .text-amber-400 { color: #a04b00 !important; }
-.admin-shell .text-rose-400 { color: #be123c !important; }
-/* Aksi berisi warna tetap memakai teks putih; jangan ikut aturan teks konten card. */
-.admin-shell main button.text-white,
-.admin-shell main a .text-white,
-.admin-shell main [class*="bg-primary-"] .text-white,
-.admin-shell main [class*="bg-secondary-"] .text-white {
-  color: #ffffff !important;
-}
-.admin-shell aside.bg-neutral-900 { background-color: #09254b !important; }
-.admin-shell aside .bg-neutral-800 { background-color: #103966 !important; }
-.admin-shell aside .bg-neutral-950 { background-color: #071d3b !important; }
-.admin-shell aside .text-white { color: #ffffff !important; }
-.admin-shell aside .text-neutral-300 { color: #d6e5f7 !important; }
-.admin-shell aside .text-neutral-400, .admin-shell aside .text-neutral-500 { color: #91b0d4 !important; }
+/* Dashboard admin mengikuti tema terang/gelap global (theme-aware) seperti halaman publik.
+   Tidak ada override khusus admin — halaman dashboard memakai kelas `dark:` secara langsung.
+   Sidebar tetap navy gelap di kedua tema melalui kelas `.on-dark`. */
 
 /* Kontras minimum untuk informasi sekunder pada seluruh halaman tema terang. */
 html:not(.dark) .text-neutral-400 { color: #64748b; }
@@ -388,13 +376,74 @@ html:not(.dark) .on-dark .text-neutral-200 { color: #e5e5e5 !important; }
 html:not(.dark) .on-dark .text-primary-200 { color: #bfdbfe !important; }
 html:not(.dark) .on-dark .text-primary-300 { color: #93c5fd !important; }
 html:not(.dark) .on-dark .text-primary-400 { color: #60a5fa !important; }
-html:not(.dark) .on-dark .text-accent-400 { color: #fbbf24 !important; }
+html:not(.dark) .on-dark .text-accent-400 { color: #60a5fa !important; }
 
-/* Override admin (tema terang) untuk warna sekunder sukuan chip statistik. */
-.admin-shell .text-sky-400 { color: #0369a1 !important; }
-.admin-shell .text-purple-400 { color: #7e22ce !important; }
-.admin-shell .text-blue-300 { color: #1d4ed8 !important; }
-.admin-shell .text-blue-400 { color: #2563eb !important; }
+/* ===== KONTRAST TEKS DI TEMA GELAP =====
+   Sebagian elemen memakai warna teks gelap (nuansa 500/600/700) tanpa pasangan
+   dark:text-* pada dirinya, sehingga nyaris tak terbaca di atas latar gelap.
+   Aturan berikut MENGANGKAT warna teks tersebut di modus gelap menjadi lebih
+   terang — namun HANYA jika elemen belum punya override `dark:text-*` sendiri
+   (guard :not([class*="dark:text"])). Komponen yang sudah benar memakai
+   dark:text-* tetap mempertahankan gayanya. */
+html.dark .text-neutral-500:not([class*="dark:text"]),
+html.dark .text-neutral-600:not([class*="dark:text"]),
+html.dark .text-neutral-700:not([class*="dark:text"]) { color: #a9b0ba; }
+
+html.dark .text-slate-500:not([class*="dark:text"]),
+html.dark .text-slate-600:not([class*="dark:text"]),
+html.dark .text-slate-700:not([class*="dark:text"]) { color: #a7b6c8; }
+
+html.dark .text-gray-500:not([class*="dark:text"]),
+html.dark .text-gray-600:not([class*="dark:text"]),
+html.dark .text-gray-700:not([class*="dark:text"]) { color: #aeb4bd; }
+
+html.dark .text-zinc-500:not([class*="dark:text"]),
+html.dark .text-zinc-600:not([class*="dark:text"]),
+html.dark .text-zinc-700:not([class*="dark:text"]) { color: #aeb5bd; }
+
+html.dark .text-primary-500:not([class*="dark:text"]),
+html.dark .text-primary-600:not([class*="dark:text"]) { color: #60a5fa; }
+html.dark .text-primary-700:not([class*="dark:text"]) { color: #7db3ff; }
+
+html.dark .text-secondary-500:not([class*="dark:text"]),
+html.dark .text-secondary-600:not([class*="dark:text"]),
+html.dark .text-secondary-700:not([class*="dark:text"]) { color: #9fb1cd; }
+
+html.dark .text-blue-500:not([class*="dark:text"]),
+html.dark .text-blue-600:not([class*="dark:text"]) { color: #7cb1f7; }
+html.dark .text-blue-700:not([class*="dark:text"]) { color: #8dbdf9; }
+
+html.dark .text-indigo-500:not([class*="dark:text"]),
+html.dark .text-indigo-600:not([class*="dark:text"]) { color: #a5b4fc; }
+
+html.dark .text-sky-500:not([class*="dark:text"]),
+html.dark .text-sky-600:not([class*="dark:text"]) { color: #38bdf8; }
+
+html.dark .text-emerald-500:not([class*="dark:text"]),
+html.dark .text-emerald-600:not([class*="dark:text"]) { color: #34d399; }
+
+html.dark .text-green-500:not([class*="dark:text"]),
+html.dark .text-green-600:not([class*="dark:text"]) { color: #4ade80; }
+
+html.dark .text-teal-500:not([class*="dark:text"]),
+html.dark .text-teal-600:not([class*="dark:text"]) { color: #2dd4bf; }
+
+html.dark .text-amber-500:not([class*="dark:text"]),
+html.dark .text-amber-600:not([class*="dark:text"]) { color: #fbbf24; }
+
+html.dark .text-orange-500:not([class*="dark:text"]),
+html.dark .text-orange-600:not([class*="dark:text"]) { color: #fb923c; }
+
+html.dark .text-red-500:not([class*="dark:text"]),
+html.dark .text-red-600:not([class*="dark:text"]) { color: #f87171; }
+
+/* Kupasan hover di modus gelap (umumnya dipakai tautan) — hormati dark:hover:text-* */
+html.dark .hover\:text-primary-600:not([class*="dark:hover:text"]):hover,
+html.dark .hover\:text-primary-700:not([class*="dark:hover:text"]):hover { color: #60a5fa; }
+html.dark .hover\:text-neutral-600:not([class*="dark:hover:text"]):hover,
+html.dark .hover\:text-neutral-700:not([class*="dark:hover:text"]):hover { color: #c3cad2; }
+html.dark .group:hover .group-hover\:text-primary-600:not([class*="dark:group-hover:text"]),
+html.dark .group:hover .group-hover\:text-primary-700:not([class*="dark:group-hover:text"]) { color: #60a5fa; }
 
 /* ===== SCROLLBAR STYLING ===== */
 ::-webkit-scrollbar {

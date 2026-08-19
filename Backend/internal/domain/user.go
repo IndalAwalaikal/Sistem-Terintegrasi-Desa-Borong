@@ -71,4 +71,5 @@ type RefreshToken struct {
 	RevokedAt             *time.Time
 	ReplacedBy            *string
 	CreatedAt             time.Time
+	LastUsedAt            time.Time
 }

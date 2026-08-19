@@ -18,6 +18,8 @@ type TransaksiFilter struct {
 	Page, Limit  int
 	UserID       string // filter via wajib_pajak.user_id (riwayat "pajak saya")
 	IncludeBatal bool
+	SortBy       string
+	SortOrder    string
 }
 
 // WajibPajakFilter menyaring daftar wajib pajak.

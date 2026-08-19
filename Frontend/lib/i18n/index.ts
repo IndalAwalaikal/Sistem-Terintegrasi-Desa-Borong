@@ -22,9 +22,22 @@ export function t(locale: Locale, path: string, fallback?: string): string {
     if (value && typeof value === 'object' && key in value) {
       value = (value as Record<string, unknown>)[key];
     } else {
-      return fallback ?? path;
+      const idValue = getNestedValue(idMessages, keys);
+      return typeof idValue === 'string' ? idValue : fallback ?? path;
     }
   }
 
   return typeof value === 'string' ? value : fallback ?? path;
+}
+
+function getNestedValue(obj: unknown, keys: string[]): unknown {
+  let value: unknown = obj;
+  for (const key of keys) {
+    if (value && typeof value === 'object' && key in value) {
+      value = (value as Record<string, unknown>)[key];
+    } else {
+      return undefined;
+    }
+  }
+  return value;
 }

@@ -1,11 +1,9 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { AppChrome } from '@/components/layout/AppChrome';
 import { Footer } from '@/components/layout/Footer';
-
-// Konten publik dibaca dari API saat request agar image build tidak membutuhkan backend aktif.
-export const dynamic = 'force-dynamic';
+import { AutoRefreshListener } from '@/components/layout/AutoRefreshListener';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -15,7 +13,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Website Resmi Desa Borong | Kec. Herlang, Kab. Bulukumba',
+    default: 'Desa Borong | Sistem Informasi & Layanan Terintegrasi',
     template: '%s | Desa Borong Digital',
   },
   description:
@@ -40,13 +38,30 @@ export const metadata: Metadata = {
     siteName: 'Desa Borong Digital',
     images: [
       {
-        url: 'https://images.unsplash.com/photo-1596402184320-417e7178b2cd?w=1200&q=80',
+        url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://desaborong.bulukumbakab.go.id'}/kantor_desa.png`,
         width: 1200,
         height: 630,
-        alt: 'Pemandangan Desa Borong Bulukumba',
+        alt: 'Kantor Desa Borong, Kecamatan Herlang, Kabupaten Bulukumba',
       },
     ],
   },
+  // Ikon / tab logo agar tampil di header browser dan saat PWA dipasang.
+  // Menggunakan icon_pwa_app.png yang sama dengan manifest.json agar konsisten.
+  icons: {
+    icon: '/icon_pwa_app.png',
+    shortcut: '/icon_pwa_app.png',
+    apple: '/icon_pwa_app.png',
+  },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Desa Borong',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0f4c81',
 };
 
 import { ToastContainer } from '@/components/ui/ToastContainer';
@@ -58,9 +73,45 @@ export default async function RootLayout({
 }>) {
   return (
     <html lang="id" suppressHydrationWarning className={`${plusJakartaSans.variable}`}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const stored = localStorage.getItem('desa-borong-ui');
+                if (stored) {
+                  const state = JSON.parse(stored).state;
+                  if (state && state.theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                  } else if (state && state.theme === 'light') {
+                    document.documentElement.classList.remove('dark');
+                  }
+                } else {
+                  const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                  if (systemTheme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                  }
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
       <body className="flex flex-col min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 font-sans antialiased">
         <AppChrome footer={<Footer />}>{children}</AppChrome>
         <ToastContainer />
+        <AutoRefreshListener />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker.register('/sw.js').catch(() => {});
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );

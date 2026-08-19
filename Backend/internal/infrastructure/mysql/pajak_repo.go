@@ -323,6 +323,28 @@ func (r *PajakRepo) ListTransaksi(ctx context.Context, f pajak.TransaksiFilter) 
 	}
 	offset := (page - 1) * limit
 
+	// Whitelist validation for SortBy to prevent SQL injection
+	orderCol := "t.created_at"
+	switch f.SortBy {
+	case "nomor_bukti":
+		orderCol = "t.nomor_bukti"
+	case "wajib_pajak_nama":
+		orderCol = "wp.nama"
+	case "nominal":
+		orderCol = "t.nominal"
+	case "tanggal_bayar":
+		orderCol = "t.tanggal_bayar"
+	case "status":
+		orderCol = "t.status"
+	case "created_at":
+		orderCol = "t.created_at"
+	}
+
+	orderDir := "DESC"
+	if strings.ToLower(f.SortOrder) == "asc" {
+		orderDir = "ASC"
+	}
+
 	qy := fmt.Sprintf(`
 		SELECT %s
 		FROM transaksi_pajak t
@@ -330,9 +352,9 @@ func (r *PajakRepo) ListTransaksi(ctx context.Context, f pajak.TransaksiFilter) 
 		JOIN wajib_pajak wp ON t.wajib_pajak_id = wp.id
 		LEFT JOIN setoran_pajak sp ON t.setoran_id = sp.id
 		WHERE %s
-		ORDER BY t.created_at DESC
+		ORDER BY %s %s
 		LIMIT %d OFFSET %d
-	`, transaksiCols, whereClause, limit, offset)
+	`, transaksiCols, whereClause, orderCol, orderDir, limit, offset)
 
 	rows, err := q(ctx, r.db).QueryContext(ctx, qy, args...)
 	if err != nil {

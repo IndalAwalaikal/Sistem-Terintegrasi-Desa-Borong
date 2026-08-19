@@ -15,19 +15,16 @@ type BeritaRepo struct{ db *sql.DB }
 
 func NewBeritaRepo(db *sql.DB) *BeritaRepo { return &BeritaRepo{db: db} }
 
-const beritaCols = "b.id,b.slug,b.judul,b.ringkasan,b.konten,b.kategori,b.gambar_sampul,COALESCE(u.nama,'Admin Desa Borong'),b.tags,b.status,b.tanggal_terbit,b.dibaca,b.created_at,b.updated_at"
+// NOTE: COALESCE(b.gambar_tengah,'') prevents a sql scan error when the column is NULL.
+const beritaCols = "b.id,b.slug,b.judul,b.ringkasan,b.konten,b.kategori,b.gambar_sampul,COALESCE(b.gambar_tengah,''),COALESCE(u.nama,'Admin Desa Borong'),b.tags,b.status,b.tanggal_terbit,b.dibaca,b.created_at,b.updated_at"
 
 func scanBerita(s rowScanner) (domain.Berita, error) {
 	var b domain.Berita
 	var tags, status string
-	var penulisID sql.NullString
 	var tanggal sql.NullTime
 	var created, updated time.Time
-	if err := s.Scan(&b.ID, &b.Slug, &b.Judul, &b.Ringkasan, &b.Konten, &b.Kategori, &b.GambarSampul, &b.Penulis, &tags, &status, &tanggal, &b.Dibaca, &created, &updated); err != nil {
+	if err := s.Scan(&b.ID, &b.Slug, &b.Judul, &b.Ringkasan, &b.Konten, &b.Kategori, &b.GambarSampul, &b.GambarTengah, &b.Penulis, &tags, &status, &tanggal, &b.Dibaca, &created, &updated); err != nil {
 		return b, err
-	}
-	if penulisID.Valid {
-		b.PenulisID = &penulisID.String
 	}
 	if tanggal.Valid {
 		b.TanggalTerbit = &tanggal.Time
@@ -91,15 +88,15 @@ func (r *BeritaRepo) GetBySlug(ctx context.Context, slug string) (domain.Berita,
 
 func (r *BeritaRepo) Create(ctx context.Context, b domain.Berita) error {
 	_, err := q(ctx, r.db).ExecContext(ctx,
-		"INSERT INTO berita(id,slug,judul,ringkasan,konten,kategori,gambar_sampul,penulis_id,tags,status,tanggal_terbit,dibaca) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-		b.ID, b.Slug, b.Judul, b.Ringkasan, b.Konten, b.Kategori, b.GambarSampul, b.PenulisID, mustJSON(b.Tags), string(b.Status), b.TanggalTerbit, 0)
+		"INSERT INTO berita(id,slug,judul,ringkasan,konten,kategori,gambar_sampul,gambar_tengah,penulis_id,tags,status,tanggal_terbit,dibaca) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+		b.ID, b.Slug, b.Judul, b.Ringkasan, b.Konten, b.Kategori, b.GambarSampul, b.GambarTengah, b.PenulisID, mustJSON(b.Tags), string(b.Status), b.TanggalTerbit, 0)
 	return err
 }
 
 func (r *BeritaRepo) Update(ctx context.Context, b domain.Berita) error {
 	_, err := q(ctx, r.db).ExecContext(ctx,
-		"UPDATE berita SET slug=?,judul=?,ringkasan=?,konten=?,kategori=?,gambar_sampul=?,tags=?,status=?,tanggal_terbit=?,updated_at=? WHERE id=?",
-		b.Slug, b.Judul, b.Ringkasan, b.Konten, b.Kategori, b.GambarSampul, mustJSON(b.Tags), string(b.Status), b.TanggalTerbit, time.Now(), b.ID)
+		"UPDATE berita SET slug=?,judul=?,ringkasan=?,konten=?,kategori=?,gambar_sampul=?,gambar_tengah=?,tags=?,status=?,tanggal_terbit=?,updated_at=? WHERE id=?",
+		b.Slug, b.Judul, b.Ringkasan, b.Konten, b.Kategori, b.GambarSampul, b.GambarTengah, mustJSON(b.Tags), string(b.Status), b.TanggalTerbit, time.Now(), b.ID)
 	return err
 }
 
@@ -110,6 +107,49 @@ func (r *BeritaRepo) Delete(ctx context.Context, id string) error {
 
 func (r *BeritaRepo) IncrementRead(ctx context.Context, id string) error {
 	_, err := q(ctx, r.db).ExecContext(ctx, "UPDATE berita SET dibaca=dibaca+1 WHERE id=?", id)
+	return err
+}
+
+// ---- Komentar Berita ----
+
+func scanBeritaKomentar(s rowScanner) (domain.BeritaKomentar, error) {
+	var k domain.BeritaKomentar
+	var userID sql.NullString
+	if err := s.Scan(&k.ID, &k.BeritaID, &userID, &k.Nama, &k.Konten, &k.CreatedAt); err != nil {
+		return k, err
+	}
+	k.UserID = nsPtr(userID)
+	return k, nil
+}
+
+func (r *BeritaRepo) ListKomentar(ctx context.Context, beritaID string) ([]domain.BeritaKomentar, error) {
+	rows, err := q(ctx, r.db).QueryContext(ctx,
+		"SELECT id,berita_id,user_id,nama,konten,created_at FROM berita_komentar WHERE berita_id=? ORDER BY created_at ASC", beritaID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []domain.BeritaKomentar{}
+	for rows.Next() {
+		k, err := scanBeritaKomentar(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, k)
+	}
+	return out, rows.Err()
+}
+
+func (r *BeritaRepo) CreateKomentar(ctx context.Context, k domain.BeritaKomentar) error {
+	_, err := q(ctx, r.db).ExecContext(ctx,
+		"INSERT INTO berita_komentar(id,berita_id,user_id,nama,konten,created_at) VALUES(?,?,?,?,?,?)",
+		k.ID, k.BeritaID, k.UserID, k.Nama, k.Konten, k.CreatedAt)
+	return err
+}
+
+func (r *BeritaRepo) DeleteKomentar(ctx context.Context, id string, userID *string) error {
+	_, err := q(ctx, r.db).ExecContext(ctx,
+		"DELETE FROM berita_komentar WHERE id=? AND (? IS NULL OR user_id=?)", id, userID, userID)
 	return err
 }
 

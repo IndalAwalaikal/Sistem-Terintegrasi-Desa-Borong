@@ -1,7 +1,7 @@
 'use client';
 
 import { useUiStore } from '@/store/uiStore';
-import { getMessages, t, type Messages } from './index';
+import { getMessages, t } from './index';
 
 export function useTranslation() {
   const locale = useUiStore((state) => state.locale);

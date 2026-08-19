@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { pajakService, DetailSetoranBatch } from "@/lib/services/pajak.service";
 import type {
   JenisPajak,
@@ -16,25 +16,15 @@ import { getCurrentYear, getTahunOptions } from "@/lib/utils/date";
 import {
   Receipt,
   Plus,
-  Search,
-  CheckCircle2,
   Clock,
-  ArrowRightLeft,
   ShieldCheck,
   Building2,
-  AlertCircle,
-  FileCheck,
-  XCircle,
   History,
-  Users,
   Layers,
-  Filter,
-  Eye,
-  Check,
-  Upload,
 } from "lucide-react";
-import { AnimatedCounter } from "@/components/ui/AnimatedCounter";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { SortableHeader } from "@/components/ui/SortableHeader";
+import { CountUp } from "@/components/ui/CountUp";
 
 const TAHUN_OPTIONS = getTahunOptions();
 
@@ -47,7 +37,7 @@ export default function AdminPajakPage() {
   // Data states
   const [ringkasan, setRingkasan] = useState<RingkasanPajak | null>(null);
   const [transaksiList, setTransaksiList] = useState<TransaksiPajak[]>([]);
-  const [totalTrx, setTotalTrx] = useState<number>(0);
+  const [, setTotalTrx] = useState<number>(0);
   const [setoranList, setSetoranList] = useState<SetoranPajak[]>([]);
   const [jenisList, setJenisList] = useState<JenisPajak[]>([]);
   const [wajibList, setWajibList] = useState<WajibPajak[]>([]);
@@ -60,9 +50,21 @@ export default function AdminPajakPage() {
   const [trxJenisFilter, setTrxJenisFilter] = useState<string>("");
   const [trxSearch, setTrxSearch] = useState<string>("");
   const [pageTrx, setPageTrx] = useState<number>(1);
+  const [sortBy, setSortBy] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  const [wpSearch, setWpSearch] = useState<string>("");
-  const [pageWp, setPageWp] = useState<number>(1);
+  const handleSort = (key: string) => {
+    if (sortBy === key) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(key);
+      setSortOrder("asc");
+    }
+    setPageTrx(1);
+  };
+
+  const [wpSearch] = useState<string>("");
+  const [pageWp] = useState<number>(1);
 
   // Selection for Batch Setoran
   const [selectedTrxIds, setSelectedTrxIds] = useState<string[]>([]);
@@ -130,7 +132,7 @@ export default function AdminPajakPage() {
     text: string;
   } | null>(null);
 
-  const fetchAllData = () => {
+  const fetchAllData = useCallback(() => {
     setLoading(true);
     Promise.all([
       pajakService.getRingkasan(selectedTahun),
@@ -142,6 +144,8 @@ export default function AdminPajakPage() {
         page: pageTrx,
         limit: 10,
         includeBatal: true,
+        sortBy: sortBy || undefined,
+        sortOrder: sortBy ? sortOrder : undefined,
       }),
       pajakService.getSetoranListAdmin(selectedTahun),
       pajakService.getJenisPajakAdmin(),
@@ -160,25 +164,18 @@ export default function AdminPajakPage() {
         setLoading(false);
       })
       .catch((err) => {
+        console.error("fetchAllData: Error", err);
         setMessage({
           type: "error",
           text: err?.message || "Gagal memuat data pajak.",
         });
         setLoading(false);
       });
-  };
+  }, [selectedTahun, trxStatusFilter, trxJenisFilter, trxSearch, pageTrx, wpSearch, pageWp, sortBy, sortOrder]);
 
   useEffect(() => {
     fetchAllData();
-  }, [
-    selectedTahun,
-    trxStatusFilter,
-    trxJenisFilter,
-    trxSearch,
-    pageTrx,
-    wpSearch,
-    pageWp,
-  ]);
+  }, [fetchAllData]);
 
   // Actions
   const handleCatatSubmit = async (e: React.FormEvent) => {
@@ -191,10 +188,11 @@ export default function AdminPajakPage() {
       });
       setShowCatatModal(false);
       fetchAllData();
-    } catch (err: any) {
+    } catch (err) {
+      console.error("handleCatatSubmit: Error", err);
       setMessage({
         type: "error",
-        text: err?.message || "Gagal mencatat transaksi.",
+        text: err instanceof Error ? err.message : "Gagal mencatat transaksi.",
       });
     }
   };
@@ -208,10 +206,11 @@ export default function AdminPajakPage() {
       );
       setMessage({ type: "success", text: "Transaksi berhasil diverifikasi!" });
       fetchAllData();
-    } catch (err: any) {
+    } catch (err) {
+      console.error("handleVerify: Error", err);
       setMessage({
         type: "error",
-        text: err?.message || "Gagal memverifikasi transaksi.",
+        text: err instanceof Error ? err.message : "Gagal memverifikasi transaksi.",
       });
     }
   };
@@ -223,10 +222,11 @@ export default function AdminPajakPage() {
       await pajakService.updateStatusTransaksi(id, "dibatalkan", alasan);
       setMessage({ type: "success", text: "Pencatatan transaksi dibatalkan." });
       fetchAllData();
-    } catch (err: any) {
+    } catch (err) {
+      console.error("handleBatal: Error", err);
       setMessage({
         type: "error",
-        text: err?.message || "Gagal membatalkan transaksi.",
+        text: err instanceof Error ? err.message : "Gagal membatalkan transaksi.",
       });
     }
   };
@@ -251,10 +251,10 @@ export default function AdminPajakPage() {
       setShowSetoranModal(false);
       setSelectedTrxIds([]);
       fetchAllData();
-    } catch (err: any) {
+    } catch (err) {
       setMessage({
         type: "error",
-        text: err?.message || "Gagal membuat setoran BPD.",
+        text: err instanceof Error ? err.message : "Gagal membuat setoran BPD.",
       });
     }
   };
@@ -274,10 +274,10 @@ export default function AdminPajakPage() {
       setShowKonfirmasiModal(false);
       setSelectedSetoranForKonf(null);
       fetchAllData();
-    } catch (err: any) {
+    } catch (err) {
       setMessage({
         type: "error",
-        text: err?.message || "Gagal mengonfirmasi setoran.",
+        text: err instanceof Error ? err.message : "Gagal mengonfirmasi setoran.",
       });
     }
   };
@@ -290,10 +290,10 @@ export default function AdminPajakPage() {
       setShowJenisModal(false);
       setEditJenis(null);
       fetchAllData();
-    } catch (err: any) {
+    } catch (err) {
       setMessage({
         type: "error",
-        text: err?.message || "Gagal menyimpan jenis pajak.",
+        text: err instanceof Error ? err.message : "Gagal menyimpan jenis pajak.",
       });
     }
   };
@@ -309,10 +309,10 @@ export default function AdminPajakPage() {
       setShowWpModal(false);
       setEditWp(null);
       fetchAllData();
-    } catch (err: any) {
+    } catch (err) {
       setMessage({
         type: "error",
-        text: err?.message || "Gagal menyimpan wajib pajak.",
+        text: err instanceof Error ? err.message : "Gagal menyimpan wajib pajak.",
       });
     }
   };
@@ -400,11 +400,14 @@ export default function AdminPajakPage() {
             {loading ? (
               <Skeleton className="h-7 w-3/4 bg-neutral-200 dark:bg-neutral-800" />
             ) : (
-              formatRupiah(
-                (ringkasan?.totalTercatat || 0) +
+              <CountUp
+                to={
+                  (ringkasan?.totalTercatat || 0) +
                   (ringkasan?.totalDiverifikasi || 0) +
-                  (ringkasan?.totalSetoran || 0),
-              )
+                  (ringkasan?.totalSetoran || 0)
+                }
+                formatter={formatRupiah}
+              />
             )}
           </div>
           <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1">
@@ -423,7 +426,7 @@ export default function AdminPajakPage() {
             {loading ? (
               <Skeleton className="h-7 w-3/4 bg-neutral-200 dark:bg-neutral-800" />
             ) : (
-              formatRupiah(ringkasan?.totalTercatat || 0)
+              <CountUp to={ringkasan?.totalTercatat || 0} formatter={formatRupiah} />
             )}
           </div>
           <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1">
@@ -442,7 +445,7 @@ export default function AdminPajakPage() {
             {loading ? (
               <Skeleton className="h-7 w-3/4 bg-neutral-200 dark:bg-neutral-800" />
             ) : (
-              formatRupiah(ringkasan?.totalDiverifikasi || 0)
+              <CountUp to={ringkasan?.totalDiverifikasi || 0} formatter={formatRupiah} />
             )}
           </div>
           <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1">
@@ -461,7 +464,7 @@ export default function AdminPajakPage() {
             {loading ? (
               <Skeleton className="h-7 w-3/4 bg-neutral-200 dark:bg-neutral-800" />
             ) : (
-              formatRupiah(ringkasan?.totalSetoran || 0)
+              <CountUp to={ringkasan?.totalSetoran || 0} formatter={formatRupiah} />
             )}
           </div>
           <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1">
@@ -606,12 +609,52 @@ export default function AdminPajakPage() {
                       }
                     />
                   </th>
-                  <th className="py-3 px-3">No. Resi</th>
-                  <th className="py-3 px-3">Wajib Pajak</th>
-                  <th className="py-3 px-3">Jenis Pajak</th>
-                  <th className="py-3 px-3">Nominal</th>
-                  <th className="py-3 px-3">Tgl Bayar</th>
-                  <th className="py-3 px-3">Status</th>
+                  <SortableHeader
+                    sortKey="nomor_bukti"
+                    activeKey={sortBy}
+                    direction={sortOrder}
+                    onSort={handleSort}
+                    className="py-3 px-3 text-left"
+                  >
+                    No. Resi
+                  </SortableHeader>
+                  <SortableHeader
+                    sortKey="wajib_pajak_nama"
+                    activeKey={sortBy}
+                    direction={sortOrder}
+                    onSort={handleSort}
+                    className="py-3 px-3 text-left"
+                  >
+                    Wajib Pajak
+                  </SortableHeader>
+                  <th className="py-3 px-3 text-left">Jenis Pajak</th>
+                  <SortableHeader
+                    sortKey="nominal"
+                    activeKey={sortBy}
+                    direction={sortOrder}
+                    onSort={handleSort}
+                    className="py-3 px-3 text-left"
+                  >
+                    Nominal
+                  </SortableHeader>
+                  <SortableHeader
+                    sortKey="tanggal_bayar"
+                    activeKey={sortBy}
+                    direction={sortOrder}
+                    onSort={handleSort}
+                    className="py-3 px-3 text-left"
+                  >
+                    Tgl Bayar
+                  </SortableHeader>
+                  <SortableHeader
+                    sortKey="status"
+                    activeKey={sortBy}
+                    direction={sortOrder}
+                    onSort={handleSort}
+                    className="py-3 px-3 text-left"
+                  >
+                    Status
+                  </SortableHeader>
                   <th className="py-3 px-3 text-right">Aksi Admin</th>
                 </tr>
               </thead>
@@ -749,63 +792,79 @@ export default function AdminPajakPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                {setoranList.map((s) => (
-                  <tr
-                    key={s.id}
-                    className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40"
-                  >
-                    <td className="py-3 px-3 font-mono font-bold text-blue-600 dark:text-blue-400">
-                      {s.nomorSetoran}
-                    </td>
-                    <td className="py-3 px-3 font-bold text-neutral-900 dark:text-white">
-                      {s.tujuan}
-                    </td>
-                    <td className="py-3 px-3 text-neutral-500">
-                      {formatDate(s.tanggalSetor)}
-                    </td>
-                    <td className="py-3 px-3 font-bold">
-                      {s.jumlahTransaksi} Trx
-                    </td>
-                    <td className="py-3 px-3 font-black text-emerald-600">
-                      {formatRupiah(s.totalSetor)}
-                    </td>
-                    <td className="py-3 px-3">
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                          s.status === "dikonfirmasi"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-indigo-100 text-indigo-800"
-                        }`}
-                      >
-                        {s.status === "dikonfirmasi"
-                          ? "Dikonfirmasi BPD"
-                          : "Sedang Disetorkan"}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-right space-x-1">
-                      {s.status === "disetor" && (
-                        <button
-                          onClick={() => {
-                            setSelectedSetoranForKonf(s);
-                            setShowKonfirmasiModal(true);
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px]"
-                        >
-                          Konfirmasi BPD
-                        </button>
-                      )}
-                      <button
-                        onClick={async () => {
-                          const res = await pajakService.getSetoranDetail(s.id);
-                          setShowDetailSetoran(res);
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 font-bold text-[11px]"
-                      >
-                        Rincian
-                      </button>
+                {loading ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <tr key={i}>
+                      <td colSpan={7} className="py-3 px-3">
+                        <Skeleton className="h-6 w-full rounded" />
+                      </td>
+                    </tr>
+                  ))
+                ) : setoranList.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-xs text-neutral-500">
+                      Belum ada data setoran BPD.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  setoranList.map((s) => (
+                    <tr
+                      key={s.id}
+                      className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40"
+                    >
+                      <td className="py-3 px-3 font-mono font-bold text-blue-600 dark:text-blue-400">
+                        {s.nomorSetoran}
+                      </td>
+                      <td className="py-3 px-3 font-bold text-neutral-900 dark:text-white">
+                        {s.tujuan}
+                      </td>
+                      <td className="py-3 px-3 text-neutral-500">
+                        {formatDate(s.tanggalSetor)}
+                      </td>
+                      <td className="py-3 px-3 font-bold">
+                        {s.jumlahTransaksi} Trx
+                      </td>
+                      <td className="py-3 px-3 font-black text-emerald-600">
+                        {formatRupiah(s.totalSetor)}
+                      </td>
+                      <td className="py-3 px-3">
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
+                            s.status === "dikonfirmasi"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-indigo-100 text-indigo-800"
+                          }`}
+                        >
+                          {s.status === "dikonfirmasi"
+                            ? "Dikonfirmasi BPD"
+                            : "Sedang Disetorkan"}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-right space-x-1">
+                        {s.status === "disetor" && (
+                          <button
+                            onClick={() => {
+                              setSelectedSetoranForKonf(s);
+                              setShowKonfirmasiModal(true);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px]"
+                          >
+                            Konfirmasi BPD
+                          </button>
+                        )}
+                        <button
+                          onClick={async () => {
+                            const res = await pajakService.getSetoranDetail(s.id);
+                            setShowDetailSetoran(res);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 font-bold text-[11px]"
+                        >
+                          Rincian
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -980,30 +1039,46 @@ export default function AdminPajakPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800 font-mono text-[11px]">
-                {auditList.map((a) => (
-                  <tr
-                    key={a.id}
-                    className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40"
-                  >
-                    <td className="py-3 px-3 text-neutral-500">
-                      {formatDate(a.createdAt)}
-                    </td>
-                    <td className="py-3 px-3 font-bold">{a.refTipe}</td>
-                    <td className="py-3 px-3 text-emerald-600">{a.refId}</td>
-                    <td className="py-3 px-3 font-bold text-neutral-900 dark:text-white">
-                      {a.perubahan}
-                    </td>
-                    <td className="py-3 px-3">
-                      {a.statusLama || "-"} &rarr;{" "}
-                      <span className="font-bold text-emerald-600">
-                        {a.statusBaru}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-neutral-600 dark:text-neutral-400 italic font-sans">
-                      {a.catatan || "-"}
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i}>
+                      <td colSpan={6} className="py-3 px-3">
+                        <Skeleton className="h-5 w-full rounded" />
+                      </td>
+                    </tr>
+                  ))
+                ) : auditList.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-xs text-neutral-500">
+                      Belum ada log audit aktivitas pajak.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  auditList.map((a) => (
+                    <tr
+                      key={a.id}
+                      className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40"
+                    >
+                      <td className="py-3 px-3 text-neutral-500">
+                        {formatDate(a.createdAt)}
+                      </td>
+                      <td className="py-3 px-3 font-bold">{a.refTipe}</td>
+                      <td className="py-3 px-3 text-emerald-600">{a.refId}</td>
+                      <td className="py-3 px-3 font-bold text-neutral-900 dark:text-white">
+                        {a.perubahan}
+                      </td>
+                      <td className="py-3 px-3">
+                        {a.statusLama || "-"} &rarr;{" "}
+                        <span className="font-bold text-emerald-600">
+                          {a.statusBaru}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-neutral-600 dark:text-neutral-400 italic font-sans">
+                        {a.catatan || "-"}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

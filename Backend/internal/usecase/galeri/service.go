@@ -2,14 +2,21 @@ package galeri
 
 import (
 	"context"
+	"fmt"
 
 	"desa-borong-api/internal/domain"
 	"desa-borong-api/internal/pkg/apputil"
+	"desa-borong-api/internal/usecase/notifikasi"
 )
 
-type Service struct{ repo Repository }
+type Service struct {
+	repo  Repository
+	notif *notifikasi.Service
+}
 
-func NewService(repo Repository) *Service { return &Service{repo: repo} }
+func NewService(repo Repository, notif *notifikasi.Service) *Service {
+	return &Service{repo: repo, notif: notif}
+}
 
 func (s *Service) List(ctx context.Context) ([]domain.GaleriAlbum, error) {
 	return s.repo.List(ctx)
@@ -26,8 +33,14 @@ func (s *Service) Create(ctx context.Context, album domain.GaleriAlbum) (domain.
 			album.Fotos[i].ID = apputil.NewID()
 		}
 	}
-	if err := s.repo.Create(ctx, album); err != nil {
+		if err := s.repo.Create(ctx, album); err != nil {
 		return album, err
+	}
+	// Notify admins of new galeri album.
+	if s.notif != nil {
+		_ = s.notif.BroadcastToAdmins(ctx, "Galeri Baru",
+			fmt.Sprintf("Foto galeri baru: \"%s\".", album.Judul),
+			"/galeri")
 	}
 	return album, nil
 }

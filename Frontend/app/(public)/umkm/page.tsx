@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { Breadcrumb } from '@/components/ui/Breadcrumb';
 import { Input } from '@/components/ui/Input';
 import { cn } from '@/lib/utils/cn';
-import { ShoppingBag, Phone, Search } from 'lucide-react';
+import { Phone, Search } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
 function UmkmPage() {
@@ -78,7 +78,7 @@ function UmkmPage() {
                 className={cn(
                   'rounded-full px-4 py-2 text-xs font-bold transition-colors',
                   kategori === item
-                    ? 'bg-accent-500 text-neutral-950 shadow-md'
+                    ? 'bg-accent-500 text-white shadow-md'
                     : 'bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 hover:border-accent-400 hover:text-accent-700'
                 )}
               >

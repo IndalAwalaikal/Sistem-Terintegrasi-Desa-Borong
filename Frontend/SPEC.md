@@ -82,7 +82,7 @@ Versi 1.0 · 13 Agustus 2026 · Pelengkap dari `PRD.md` dan `AGENTS.md`
 | `/dashboard/login` | Login khusus admin |
 
 ### 3.3 Proteksi Route
-Gunakan `proxy.ts` (pengganti `middleware.ts` di Next 16) di root proyek untuk:
+Gunakan `middleware.ts` di Next 15 di root proyek untuk:
 - Redirect ke `/login` bila mengakses `/akun/*` tanpa sesi.
 - Redirect ke `/dashboard/login` bila mengakses `/dashboard/*` tanpa sesi admin.
 - Guard tambahan `/dashboard/pengguna` khusus role `super_admin` (bisa dicek ulang di layout server component).
@@ -427,7 +427,7 @@ types/
 messages/
   id.json
   en.json
-proxy.ts
+middleware.ts
 ```
 
 ## 14. Testing Plan
